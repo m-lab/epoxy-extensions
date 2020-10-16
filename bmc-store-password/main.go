@@ -1,4 +1,4 @@
-// Copyright 2016 k8s-support Authors
+// Copyright 2020 M-Lab Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,12 +13,12 @@
 // limitations under the License.
 //////////////////////////////////////////////////////////////////////////////
 
-// bmc-password implements the epoxy extension API and provides a way for
+// bmc-store-password implements the epoxy extension API and provides a way for
 // machines booting with epoxy to store the configured BMC password to GCD.
 //
 // To deploy the bmc-password, the ePoxy server must have an extension
 // registered that maps an operation name to this server, e.g.:
-//     "store-bmc-password" -> "http://localhost:8800/store-bmc-password"
+//     "bmc-store-password" -> "http://localhost:8800/bmc-store-password"
 package main
 
 import (
