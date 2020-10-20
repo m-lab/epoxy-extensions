@@ -24,27 +24,32 @@ import (
 	"time"
 
 	"github.com/m-lab/epoxy/extension"
+	"github.com/m-lab/go/host"
 )
 
-type fakeTokenGenerator struct {
-	token string
+type fakePassword struct {
+	password string
 }
 
-func (g *fakeTokenGenerator) Token(target string) ([]byte, error) {
-	if g.token == "" {
-		return nil, fmt.Errorf("Failing to generate token")
+func (p *fakePassword) Store(hostname string, password string) error {
+	_, err := host.Parse(hostname)
+	if err != nil {
+		return fmt.Errorf("Bad hostname")
 	}
-	return []byte(g.token), nil
+	if p.password == "" {
+		return fmt.Errorf("No password was provided")
+	}
+	return nil
 }
 
-func Test_allocateTokenHandler(t *testing.T) {
+func Test_passwordHandler(t *testing.T) {
 	tests := []struct {
-		name   string
-		method string
-		body   string
-		v1     *extension.V1
-		status int
-		token  string
+		name     string
+		method   string
+		body     string
+		v1       *extension.V1
+		status   int
+		password string
 	}{
 		{
 			name:   "success",
@@ -54,19 +59,32 @@ func Test_allocateTokenHandler(t *testing.T) {
 				IPv4Address: "192.168.1.1",
 				LastBoot:    time.Now().UTC().Add(-5 * time.Minute),
 			},
-			status: http.StatusOK,
-			token:  "012345.abcdefghijklmnop",
+			status:   http.StatusOK,
+			password: "012345abcdefghijklmnop",
 		},
 		{
-			name:   "failure-bad-method",
-			method: "GET",
-			status: http.StatusMethodNotAllowed,
-		},
-		{
-			name:   "failure-bad-requested",
+			name:   "failure-bad-hostname",
 			method: "POST",
-			v1:     nil,
-			status: http.StatusBadRequest,
+			v1: &extension.V1{
+				Hostname:    "lol-foo01.mlab-oti.measurement-lab.org",
+				IPv4Address: "192.168.1.1",
+				LastBoot:    time.Now().UTC().Add(-5 * time.Minute),
+			},
+			status:   http.StatusInternalServerError,
+			password: "012345abcdefghijklmnop",
+		},
+		{
+			name:     "failure-bad-method",
+			method:   "GET",
+			status:   http.StatusMethodNotAllowed,
+			password: "54321abcdefghijklmnop",
+		},
+		{
+			name:     "failure-bad-request",
+			method:   "POST",
+			v1:       nil,
+			status:   http.StatusBadRequest,
+			password: "54321zyxwvu",
 		},
 		{
 			name:   "failure-last-boot-too-old",
@@ -76,65 +94,33 @@ func Test_allocateTokenHandler(t *testing.T) {
 				IPv4Address: "192.168.1.1",
 				LastBoot:    time.Now().UTC().Add(-125 * time.Minute),
 			},
-			status: http.StatusRequestTimeout,
+			status:   http.StatusRequestTimeout,
+			password: "testpassword",
 		},
 		{
-			name:   "failure-failure-to-generate-token",
+			name:   "failure-no-password-provided",
 			method: "POST",
 			v1: &extension.V1{
 				Hostname:    "mlab1-foo01.mlab-oti.measurement-lab.org",
 				IPv4Address: "192.168.1.1",
 				LastBoot:    time.Now().UTC().Add(-5 * time.Minute),
 			},
-			status: http.StatusInternalServerError,
-			token:  "",
+			status: http.StatusBadRequest,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			localGenerator = &fakeTokenGenerator{token: tt.token}
+			localPassword = &fakePassword{tt.password}
 			ext := extension.Request{V1: tt.v1}
 			req := httptest.NewRequest(
-				tt.method, "/allocate_k8s_token", strings.NewReader(ext.Encode()))
+				tt.method, "/v1/bmc-store-password?p="+tt.password, strings.NewReader(ext.Encode()))
 			rec := httptest.NewRecorder()
 
-			allocateTokenHandler(rec, req)
+			passwordHandler(rec, req)
 
 			if tt.status != rec.Code {
-				t.Errorf("allocateTokenHandler() bad status code: got %d; want %d",
+				t.Errorf("passwordHandler() bad status code: got %d; want %d",
 					rec.Code, tt.status)
-			}
-			if rec.Body.String() != tt.token {
-				t.Errorf("allocateTokenHandler() bad token returned: got %q; want %q",
-					rec.Body.String(), tt.token)
-			}
-		})
-	}
-}
-
-func Test_k8sTokenGenerator_Token(t *testing.T) {
-	tests := []struct {
-		name     string
-		command  string
-		response string
-	}{
-		{
-			name:     "success",
-			command:  "/bin/echo",
-			response: "token create --ttl 5m --description Allow test to join the cluster\n",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			g := &k8sTokenGenerator{
-				Command: tt.command,
-			}
-			got, err := g.Token("test")
-			if err != nil {
-				t.Fatalf("k8sTokenGenerator.Token() = %q, want nil", err)
-			}
-			if string(got) != tt.response {
-				t.Errorf("k8sTokenGenerator.Token() = %q, want %q", got, tt.response)
 			}
 		})
 	}

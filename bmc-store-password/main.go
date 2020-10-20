@@ -18,7 +18,7 @@
 //
 // To deploy the bmc-password, the ePoxy server must have an extension
 // registered that maps an operation name to this server, e.g.:
-//     "bmc-store-password" -> "http://localhost:8800/bmc-store-password"
+//     "bmc-store-password" -> "http://localhost:8801/bmc-store-password"
 package main
 
 import (
@@ -68,14 +68,14 @@ var (
 	)
 )
 
-// passwordStorer defines the interface for storing BMC passwords.
+// password defines the interface for storing BMC passwords.
 type password interface {
 	Store(target string, password string) error
 }
 
 type bmcPassword struct{}
 
-// Token generates a new k8s token.
+// Store stores a BMC password in GCD.
 func (p *bmcPassword) Store(hostname string, password string) error {
 	parts, err := host.Parse(hostname)
 	if err != nil {
@@ -110,7 +110,7 @@ func (p *bmcPassword) Store(hostname string, password string) error {
 	return nil
 }
 
-// passwordHandler is an http.HandlerFunc for responding to an epoxy extension
+// passwordHandler is an http.HandlerFunc for responding to an ePoxy extension
 // Request.
 func passwordHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: verify this is from a trusted source (admin or epoxy source)
@@ -128,8 +128,8 @@ func passwordHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the password from the query.
 	reqPassword, ok := r.URL.Query()["p"]
 	if !ok || len(reqPassword[0]) < 1 {
+		log.Println("Query parameter 'p' missing in request, or is empty string.")
 		w.WriteHeader(http.StatusBadRequest)
-		log.Println("Query parameter 'p' missing in request.")
 		// Write no response.
 		return
 	}
@@ -146,6 +146,7 @@ func passwordHandler(w http.ResponseWriter, r *http.Request) {
 	if time.Now().UTC().Sub(ext.V1.LastBoot) > 120*time.Minute {
 		// According to ePoxy the machine booted over 2 hours ago,
 		// which is longer than we're willing to support.
+		log.Println("The requesting machine booted more than two hours ago. Rejecting.")
 		w.WriteHeader(http.StatusRequestTimeout)
 		// Write no response.
 		return
@@ -179,5 +180,6 @@ func main() {
 	http.HandleFunc("/v1/bmc-store-password",
 		promhttp.InstrumentHandlerDuration(
 			requestDuration, http.HandlerFunc(passwordHandler)))
+	log.Printf("Listening on interface: %s", *fListenAddress)
 	log.Fatal(http.ListenAndServe(*fListenAddress, nil))
 }
