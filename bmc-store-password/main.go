@@ -86,7 +86,7 @@ func (p *bmcPassword) Store(hostname string, password string) error {
 
 	bmcAddr, err := net.LookupHost(bmcHostname)
 	if err != nil {
-		return fmt.Errorf("Could not resolve BMC hostanme: %s", bmcHostname)
+		return fmt.Errorf("Could not resolve BMC hostname: %s", bmcHostname)
 	}
 
 	c := &creds.Credentials{
