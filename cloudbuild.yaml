@@ -20,6 +20,6 @@ steps:
 # Be sure building the bmc-store-password Docker image works.
 - name: gcr.io/cloud-builders/docker
   args: [
-    'build', '--tag=gcr.io/$PROJECT_ID/disco', './bmc-store-password/'
+    'build', '--tag=mlab/test:bmc-store-password', './bmc-store-password/'
   ]
 
