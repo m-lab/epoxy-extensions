@@ -177,7 +177,7 @@ func main() {
 	localPassword = &bmcPassword{}
 
 	http.Handle("/metrics", promhttp.Handler())
-	http.HandleFunc("/v1/bmc-store-password",
+	http.HandleFunc("/v1/bmc_store_password",
 		promhttp.InstrumentHandlerDuration(
 			requestDuration, http.HandlerFunc(passwordHandler)))
 	log.Printf("Listening on interface: %s", *fListenAddress)
