@@ -29,6 +29,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -125,15 +126,6 @@ func passwordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract the password from the query.
-	reqPassword, ok := r.URL.Query()["p"]
-	if !ok || len(reqPassword[0]) < 1 {
-		log.Println("Query parameter 'p' missing in request, or is empty string.")
-		w.WriteHeader(http.StatusBadRequest)
-		// Write no response.
-		return
-	}
-
 	// Decode the extension request.
 	ext := &extension.Request{}
 	err := ext.Decode(r.Body)
@@ -153,6 +145,23 @@ func passwordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Request: ", ext.Encode())
+
+	// Parse query parameters from the request.
+	queryParams, err := url.ParseQuery(ext.V1.RawQuery)
+	if err != nil {
+		log.Printf("Failed to parse RawQuery field: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		// Write no response.
+		return
+	}
+
+	reqPassword, ok := queryParams["p"]
+	if !ok || len(reqPassword[0]) < 1 {
+		log.Println("Query parameter 'p' missing in request, or is empty.")
+		w.WriteHeader(http.StatusBadRequest)
+		// Write no response.
+		return
+	}
 
 	err = localPassword.Store(ext.V1.Hostname, reqPassword[0])
 	if err != nil {
