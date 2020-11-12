@@ -117,7 +117,7 @@ func passwordHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: verify this is from a trusted source (admin or epoxy source)
 	// else return HTTP 401 (Unauthorized) and fire an alert (since this should never happen)
 
-	var reqPassword []string
+	var reqPassword string
 
 	// Require requests to be POSTs.
 	if r.Method != http.MethodPost {
@@ -155,15 +155,15 @@ func passwordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reqPassword, ok := queryParams["p"]
-	if !ok || len(reqPassword[0]) < 1 {
+	reqPassword = queryParams.Get("p")
+	if reqPassword == "" {
 		log.Println("Query parameter 'p' missing in request, or is empty.")
 		w.WriteHeader(http.StatusBadRequest)
 		// Write no response.
 		return
 	}
 
-	err = localPassword.Store(ext.V1.Hostname, reqPassword[0])
+	err = localPassword.Store(ext.V1.Hostname, reqPassword)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
