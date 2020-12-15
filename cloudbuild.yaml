@@ -23,3 +23,9 @@ steps:
     'build', '--tag=mlab/test:bmc-store-password', './bmc-store-password/'
   ]
 
+# Be sure building the token_server Docker image works.
+- name: gcr.io/cloud-builders/docker
+  args: [
+    'build', '--tag=mlab/test:token_server', './token_server/'
+  ]
+
