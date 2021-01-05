@@ -13,12 +13,12 @@
 // limitations under the License.
 //////////////////////////////////////////////////////////////////////////////
 
-// bmc-store-password implements the epoxy extension API and provides a way for
+// bmc_store_password implements the epoxy extension API and provides a way for
 // machines booting with epoxy to store the configured BMC password to GCD.
 //
-// To deploy the bmc-password, the ePoxy server must have an extension
+// To deploy bmc_store_password, the ePoxy server must have an extension
 // registered that maps an operation name to this server, e.g.:
-//     "bmc-store-password" -> "http://localhost:8801/bmc-store-password"
+//     "bmc_store_password" -> "http://localhost:8801/bmc_store_password"
 package main
 
 import (
