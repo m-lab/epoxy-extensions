@@ -85,17 +85,18 @@ type k8sTokenGenerator struct {
 }
 
 type tokenResponse struct {
-	APIAddress string `json:"apiaddress"`
+	APIAddress string `json:"api_address"`
 	Token      string `json:"token"`
-	CAHash     string `json:"cahash"`
+	CAHash     string `json:"ca_hash"`
 }
 
 // Token generates a new k8s token.
 func (g *k8sTokenGenerator) Token(target string) error {
 	// Allocate the token for the given hostname.
 	cmd := exec.Command(
-		g.Command, "token", "create", "--ttl", "5m", "--print-join-command",
-		"--description", "Allow "+target+" to join the cluster")
+		g.Command, "token", "create", "--ttl", "5m",
+		"--description", "Allow "+target+" to join the cluster",
+		"--print-join-command")
 	output, err := cmd.Output()
 	if err != nil {
 		return err
@@ -108,6 +109,8 @@ func (g *k8sTokenGenerator) Token(target string) error {
 	return nil
 }
 
+// Response returns an appropriate response body for the incoming request, based
+// on the API version.
 func (g *k8sTokenGenerator) Response(version string) ([]byte, error) {
 	if version == "v1" {
 		return []byte(g.TokenResponse.Token), nil
@@ -158,18 +161,17 @@ func allocateTokenHandler(w http.ResponseWriter, r *http.Request, v string) {
 		return
 	}
 
+	// A v1 response is just a string (the token), whereas a v2 response will be JSON.
 	if v == "v1" {
-		// Write response to caller.
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		resp, _ = localGenerator.Response(v)
 	} else {
-		// Write response to caller.
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		resp, err = localGenerator.Response(v)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	}
+
+	resp, err = localGenerator.Response(v)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
