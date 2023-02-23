@@ -19,15 +19,18 @@
 //
 // To deploy the token_server, the ePoxy server must have an extension
 // registered that maps an operation name to this server, e.g.:
-//     "allocate_k8s_token" -> "http://localhost:8800/allocate_k8s_token"
+//
+//	"allocate_k8s_token" -> "http://localhost:8800/allocate_k8s_token"
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"math"
 	"net/http"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/m-lab/epoxy/extension"
@@ -72,25 +75,52 @@ func init() {
 
 // tokenGenerator defines the interface for creating tokens.
 type tokenGenerator interface {
-	Token(target string) ([]byte, error) // Generate a new token.
+	Token(target string) error // Generate a new token.
+	Response(version string) ([]byte, error)
 }
 
 type k8sTokenGenerator struct {
-	Command string
+	Command       string
+	TokenResponse tokenResponse
+}
+
+type tokenResponse struct {
+	APIAddress string `json:"apiaddress"`
+	Token      string `json:"token"`
+	CAHash     string `json:"cahash"`
 }
 
 // Token generates a new k8s token.
-func (g *k8sTokenGenerator) Token(target string) ([]byte, error) {
+func (g *k8sTokenGenerator) Token(target string) error {
 	// Allocate the token for the given hostname.
 	cmd := exec.Command(
-		g.Command, "token", "create", "--ttl", "5m",
+		g.Command, "token", "create", "--ttl", "5m", "--print-join-command",
 		"--description", "Allow "+target+" to join the cluster")
-	return cmd.Output()
+	output, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	fields := strings.Fields(string(output))
+	g.TokenResponse.APIAddress = fields[2]
+	g.TokenResponse.Token = fields[4]
+	g.TokenResponse.CAHash = fields[6]
+
+	return nil
+}
+
+func (g *k8sTokenGenerator) Response(version string) ([]byte, error) {
+	if version == "v1" {
+		return []byte(g.TokenResponse.Token), nil
+	} else {
+		return json.Marshal(g.TokenResponse)
+	}
 }
 
 // allocateTokenHandler is an http.HandlerFunc for responding to an epoxy extension
 // Request.
-func allocateTokenHandler(w http.ResponseWriter, r *http.Request) {
+func allocateTokenHandler(w http.ResponseWriter, r *http.Request, v string) {
+	var resp []byte
+
 	// TODO: verify this is from a trusted source (admin or epoxy source)
 	// else return HTTP 401 (Unauthorized) and fire an alert (since this should never happen)
 
@@ -120,7 +150,7 @@ func allocateTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Request:", ext.Encode())
 
-	token, err := localGenerator.Token(ext.V1.Hostname)
+	err = localGenerator.Token(ext.V1.Hostname)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -128,20 +158,43 @@ func allocateTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write response to caller.
-	w.Header().Set("Content-Type", "text/plain; charset=us-ascii")
+	if v == "v1" {
+		// Write response to caller.
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		resp, _ = localGenerator.Response(v)
+	} else {
+		// Write response to caller.
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		resp, err = localGenerator.Response(v)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
 	w.WriteHeader(http.StatusOK)
-	w.Write(token)
+	w.Write(resp)
 }
 
 func main() {
 	flag.Parse()
 
-	localGenerator = &k8sTokenGenerator{fKubeadmCommand}
+	localGenerator = &k8sTokenGenerator{
+		fKubeadmCommand,
+		tokenResponse{},
+	}
 
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/v1/allocate_k8s_token",
-		promhttp.InstrumentHandlerDuration(
-			requestDuration, http.HandlerFunc(allocateTokenHandler)))
+		promhttp.InstrumentHandlerDuration(requestDuration, http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				allocateTokenHandler(w, r, "v1")
+			})))
+
+	http.HandleFunc("/v2/allocate_k8s_token",
+		promhttp.InstrumentHandlerDuration(requestDuration, http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				allocateTokenHandler(w, r, "v2")
+			})))
 	log.Fatal(http.ListenAndServe(":"+fPort, nil))
 }
