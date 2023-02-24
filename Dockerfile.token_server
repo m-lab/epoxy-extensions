@@ -1,0 +1,6 @@
+FROM golang:1.19
+ADD . /go/src/github.com/m-lab/epoxy-extensions
+COPY kubeadm /usr/bin/
+WORKDIR /go/src/github.com/m-lab/epoxy-extensions
+RUN go install -v ./token_server
+ENTRYPOINT ["/go/bin/token_server"]
