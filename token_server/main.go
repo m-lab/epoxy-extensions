@@ -26,6 +26,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -63,6 +64,7 @@ var (
 	)
 
 	localGenerator tokenGenerator
+	localCommander commander
 )
 
 func init() {
@@ -71,6 +73,17 @@ func init() {
 	flag.StringVar(&fPort, "port", "8800",
 		"Accept connection on this port.")
 	prometheus.MustRegister(requestDuration)
+}
+
+type commander interface {
+	Command(prog string, args ...string) ([]byte, error)
+}
+
+type runCommand struct{}
+
+func (c *runCommand) Command(prog string, args ...string) ([]byte, error) {
+	cmd := exec.Command(prog, args...)
+	return cmd.Output()
 }
 
 // tokenGenerator defines the interface for creating tokens.
@@ -92,16 +105,22 @@ type tokenResponse struct {
 
 // Token generates a new k8s token.
 func (g *k8sTokenGenerator) Token(target string) error {
+	args := []string{
+		"token", "create", "--ttl", "5m", "--print-join-command",
+		"--description", "Allow " + target + " to join the cluster",
+	}
 	// Allocate the token for the given hostname.
-	cmd := exec.Command(
-		g.Command, "token", "create", "--ttl", "5m",
-		"--description", "Allow "+target+" to join the cluster",
-		"--print-join-command")
-	output, err := cmd.Output()
+	output, err := localCommander.Command(g.Command, args...)
 	if err != nil {
 		return err
 	}
 	fields := strings.Fields(string(output))
+	// The join command should have 7 fields, and we count on this to return the
+	// right values. A sample join command:
+	// kubeadm join <api address> --token <token> --discovery-token-ca-cert-hash <hash>
+	if len(fields) != 7 {
+		return fmt.Errorf("bad join command: %s", string(output))
+	}
 	g.TokenResponse.APIAddress = fields[2]
 	g.TokenResponse.Token = fields[4]
 	g.TokenResponse.CAHash = fields[6]
@@ -114,9 +133,8 @@ func (g *k8sTokenGenerator) Token(target string) error {
 func (g *k8sTokenGenerator) Response(version string) ([]byte, error) {
 	if version == "v1" {
 		return []byte(g.TokenResponse.Token), nil
-	} else {
-		return json.Marshal(g.TokenResponse)
 	}
+	return json.Marshal(g.TokenResponse)
 }
 
 // allocateTokenHandler is an http.HandlerFunc for responding to an epoxy extension
@@ -182,9 +200,11 @@ func main() {
 	flag.Parse()
 
 	localGenerator = &k8sTokenGenerator{
-		fKubeadmCommand,
-		tokenResponse{},
+		Command:       fKubeadmCommand,
+		TokenResponse: tokenResponse{},
 	}
+
+	localCommander = &runCommand{}
 
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/v1/allocate_k8s_token",
