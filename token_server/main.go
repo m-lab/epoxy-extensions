@@ -81,6 +81,9 @@ type commander interface {
 
 type runCommand struct{}
 
+// Command takes a program name and arguments as parameters and hands those off
+// to exec.Command. It exists as a wrapper to exec.Command to faciliate
+// testing. It has the same return types as exec.Command: ([]byte, error).
 func (c *runCommand) Command(prog string, args ...string) ([]byte, error) {
 	cmd := exec.Command(prog, args...)
 	return cmd.Output()
