@@ -63,17 +63,16 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/v1/allocate_k8s_token",
 		promhttp.InstrumentHandlerDuration(metrics.TokenRequestDuration,
-			handler.New("allocate_k8s_token", "v1", k8sToken, bmcPassword)))
+			handler.NewK8sToken("v1", k8sToken)))
 
 	http.HandleFunc("/v2/allocate_k8s_token",
 		promhttp.InstrumentHandlerDuration(metrics.TokenRequestDuration,
-			handler.New("allocate_k8s_token", "v2", k8sToken, bmcPassword)))
+			handler.NewK8sToken("v2", k8sToken)))
 
 	http.HandleFunc("/v1/bmc_store_password",
 		promhttp.InstrumentHandlerDuration(metrics.BMCRequestDuration,
-			handler.New("bmc_store_password", "v1", k8sToken, bmcPassword)))
+			handler.NewBmcPassword(bmcPassword)))
 
 	log.Printf("Listening on interface: %s", fListenAddress)
 	log.Fatal(http.ListenAndServe(fListenAddress, nil))
-
 }
