@@ -13,7 +13,7 @@
 // limitations under the License.
 //////////////////////////////////////////////////////////////////////////////
 
-package main
+package allocate_k8s_token
 
 import (
 	"encoding/json"
