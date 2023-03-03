@@ -1,18 +1,3 @@
-// Copyright 2023 M-Lab Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//////////////////////////////////////////////////////////////////////////////
-
 package handler
 
 import (
@@ -26,19 +11,19 @@ import (
 	"github.com/m-lab/epoxy/extension"
 )
 
+// k8sToken is the struct used to interact with the allocate_k8s_token package.
 type k8sToken struct {
 	generator allocate_k8s_token.TokenGenerator
 	version   string
 }
 
-// Handler
+// ServeHTTP is the request handler for the allocate_k8s_token requests.
 func (kt *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var body []byte
 
 	// Require requests to be POSTs.
 	if req.Method != http.MethodPost {
 		resp.WriteHeader(http.StatusMethodNotAllowed)
-		// Write no response.
 		return
 	}
 
@@ -46,7 +31,6 @@ func (kt *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if err != nil || ext.V1 == nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusBadRequest)
-		// Write no response.
 		return
 	}
 
@@ -54,7 +38,6 @@ func (kt *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		// According to ePoxy the machine booted over 2 hours ago,
 		// which is longer than we're willing to support.
 		resp.WriteHeader(http.StatusRequestTimeout)
-		// Write no response.
 		return
 	}
 
@@ -84,18 +67,34 @@ func (kt *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.Write(body)
 }
 
+// bmcPassword is the struct used to interact with the bmc_store_password package.
 type bmcPassword struct {
 	password bmc_store_password.Password
 }
 
-// Handler
+// ServeHTTP is the request handler for the allocate_k8s_token requests.
 func (bp *bmcPassword) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var reqPassword string
+
+	// Require requests to be POSTs.
+	if req.Method != http.MethodPost {
+		resp.WriteHeader(http.StatusMethodNotAllowed)
+		// Write no response.
+		return
+	}
 
 	ext, err := decodeMessage(req)
 	if err != nil || ext.V1 == nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusBadRequest)
+		// Write no response.
+		return
+	}
+
+	if time.Now().UTC().Sub(ext.V1.LastBoot) > 120*time.Minute {
+		// According to ePoxy the machine booted over 2 hours ago,
+		// which is longer than we're willing to support.
+		resp.WriteHeader(http.StatusRequestTimeout)
 		// Write no response.
 		return
 	}
@@ -125,12 +124,15 @@ func (bp *bmcPassword) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusOK)
 }
 
+// decodeMessage takes and http request as input and returns the decoded
+// extension request data.
 func decodeMessage(req *http.Request) (*extension.Request, error) {
 	ext := &extension.Request{}
 	err := ext.Decode(req.Body)
 	return ext, err
 }
 
+// NewK8sToken returns a new k8sToken object.
 func NewK8sToken(version string, generator allocate_k8s_token.TokenGenerator) http.Handler {
 	return &k8sToken{
 		generator: generator,
@@ -138,6 +140,7 @@ func NewK8sToken(version string, generator allocate_k8s_token.TokenGenerator) ht
 	}
 }
 
+// NewBmcPassword return a new bmcPassword object.
 func NewBmcPassword(password bmc_store_password.Password) http.Handler {
 	return &bmcPassword{
 		password: password,

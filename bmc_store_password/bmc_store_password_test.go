@@ -17,114 +17,50 @@ package bmc_store_password
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/m-lab/epoxy/extension"
 	"github.com/m-lab/go/host"
 )
 
-type fakePassword struct {
-	password string
-}
+type fakePassword struct{}
 
 func (p *fakePassword) Store(hostname string, password string) error {
 	_, err := host.Parse(hostname)
 	if err != nil {
-		return fmt.Errorf("Bad hostname")
-	}
-	if p.password == "" {
-		return fmt.Errorf("No password was provided")
+		return fmt.Errorf("could not parse hostname: %s", hostname)
 	}
 	return nil
 }
 
-func Test_passwordHandler(t *testing.T) {
+// It is debatable whether this unit test is even worthwhile. There is not much
+// to test in bmc_store_password, as almost the entire functionality of the
+// package is hangled by github.com/m-lab/reboot-service/creds. About the only
+// thing to test is whether Store() properly returns an error when it receives a
+// malformed M-Lab hostname. The snipped of code in fakePassword.Store() was
+// copied directly from the real Store() function.
+func Test_Store(t *testing.T) {
 	tests := []struct {
 		name     string
-		method   string
-		body     string
-		v1       *extension.V1
-		status   int
-		password string
+		hostname string
+		wantErr  bool
 	}{
 		{
-			name:   "success",
-			method: "POST",
-			v1: &extension.V1{
-				Hostname:    "mlab1-foo01.mlab-oti.measurement-lab.org",
-				IPv4Address: "192.168.1.1",
-				LastBoot:    time.Now().UTC().Add(-5 * time.Minute),
-				RawQuery:    "p=somepass&z=lol",
-			},
-			status:   http.StatusOK,
-			password: "012345abcdefghijklmnop",
+			name:     "success",
+			hostname: "mlab1-foo01.mlab-oti.measurement-lab.org",
+			wantErr:  false,
 		},
 		{
-			name:   "failure-bad-hostname",
-			method: "POST",
-			v1: &extension.V1{
-				Hostname:    "lol-foo01.mlab-oti.measurement-lab.org",
-				IPv4Address: "192.168.1.1",
-				LastBoot:    time.Now().UTC().Add(-5 * time.Minute),
-				RawQuery:    "p=somepass&z=lol",
-			},
-			status:   http.StatusInternalServerError,
-			password: "012345abcdefghijklmnop",
-		},
-		{
-			name:     "failure-bad-method",
-			method:   "GET",
-			status:   http.StatusMethodNotAllowed,
-			password: "54321abcdefghijklmnop",
-		},
-		{
-			name:     "failure-bad-request",
-			method:   "POST",
-			v1:       nil,
-			status:   http.StatusBadRequest,
-			password: "54321zyxwvu",
-		},
-		{
-			name:   "failure-last-boot-too-old",
-			method: "POST",
-			v1: &extension.V1{
-				Hostname:    "mlab1-foo01.mlab-oti.measurement-lab.org",
-				IPv4Address: "192.168.1.1",
-				LastBoot:    time.Now().UTC().Add(-125 * time.Minute),
-				RawQuery:    "p=somepass&z=lol",
-			},
-			status:   http.StatusRequestTimeout,
-			password: "testpassword",
-		},
-		{
-			name:   "failure-no-password-provided",
-			method: "POST",
-			v1: &extension.V1{
-				Hostname:    "mlab1-foo01.mlab-oti.measurement-lab.org",
-				IPv4Address: "192.168.1.1",
-				LastBoot:    time.Now().UTC().Add(-5 * time.Minute),
-				RawQuery:    "y=rofl&z=lol",
-			},
-			status: http.StatusBadRequest,
+			name:     "failure-bad-hostname",
+			hostname: "lol-foo01.mlab-oti.measurement-lab.org",
+			wantErr:  true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			localPassword = &fakePassword{tt.password}
-			ext := extension.Request{V1: tt.v1}
-			req := httptest.NewRequest(
-				tt.method, "/v1/bmc-store-password?p="+tt.password, strings.NewReader(ext.Encode()))
-			rec := httptest.NewRecorder()
-
-			passwordHandler(rec, req)
-
-			if tt.status != rec.Code {
-				t.Errorf("passwordHandler() bad status code: got %d; want %d",
-					rec.Code, tt.status)
+			fp := &fakePassword{}
+			err := fp.Store(tt.hostname, "")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Store(): want err %v, got %v", tt.wantErr, err)
 			}
 		})
 	}

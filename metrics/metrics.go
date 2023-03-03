@@ -3,15 +3,15 @@ package metrics
 import (
 	"math"
 
-	"github.com/prometheus/client_golang/promauto"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
 	// <extension>RequestDuration provides a histogram of processing times. The
 	// buckets should use periods that are intuitive for people.
 	//
-	// For example, it provides metrics:
+	// For example, it provides metrics similar to:
 	//   allocate_k8s_token_request_duration_seconds{code="...", le="..."}
 	//   ...
 	//   allocate_k8s_token_request_duration_seconds{code="..."}
