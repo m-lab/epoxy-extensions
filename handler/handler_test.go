@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/m-lab/epoxy-extensions/allocate_k8s_token"
+	token "github.com/m-lab/epoxy-extensions/allocate_k8s_token"
 	"github.com/m-lab/epoxy/extension"
 	"github.com/m-lab/go/host"
 )
@@ -21,7 +21,7 @@ var (
 )
 
 type fakeTokenGenerator struct {
-	response allocate_k8s_token.TokenResponse
+	response token.Details
 	token    string
 	version  string
 }
@@ -122,7 +122,7 @@ func Test_k8sToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		fg := &fakeTokenGenerator{
-			response: allocate_k8s_token.TokenResponse{
+			response: token.Details{
 				APIAddress: testAPIAddress,
 				CAHash:     testCAHash,
 				Token:      tt.token,

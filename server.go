@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/m-lab/epoxy-extensions/allocate_k8s_token"
-	"github.com/m-lab/epoxy-extensions/bmc_store_password"
+	token "github.com/m-lab/epoxy-extensions/allocate_k8s_token"
+	bmc "github.com/m-lab/epoxy-extensions/bmc_store_password"
 	"github.com/m-lab/epoxy-extensions/handler"
 	"github.com/m-lab/epoxy-extensions/metrics"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -36,8 +36,8 @@ func init() {
 func main() {
 	flag.Parse()
 
-	k8sToken := allocate_k8s_token.New(fBinDir)
-	bmcPassword := bmc_store_password.New()
+	k8sToken := token.New(fBinDir)
+	bmcPassword := bmc.New()
 
 	http.HandleFunc("/", rootHandler)
 	http.Handle("/metrics", promhttp.Handler())

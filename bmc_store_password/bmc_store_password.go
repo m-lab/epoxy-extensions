@@ -1,6 +1,6 @@
 // bmc_store_password implements the epoxy extension API and provides a way for
 // machines booting with epoxy to store the configured BMC password to GCD.
-package bmc_store_password
+package bmc
 
 import (
 	"context"

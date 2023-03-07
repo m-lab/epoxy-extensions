@@ -1,6 +1,6 @@
-// allocate_k8s_token implements the epoxy extension API and provides a way for
-// machines booting with epoxy to obtain a bootstrap token to join the cluster.
-package allocate_k8s_token
+// token implements the epoxy extension API and provides a way for machines
+// booting with epoxy to obtain a bootstrap token to join the cluster.
+package token
 
 import (
 	"encoding/json"
@@ -29,29 +29,29 @@ func (c *runCommand) Command(prog string, args ...string) ([]byte, error) {
 	return cmd.Output()
 }
 
-// TokenGenerator defines the interface for creating tokens.
-type TokenGenerator interface {
+// Generator defines the interface for creating tokens.
+type Generator interface {
 	Create(target string) error // Generate a new token.
 	Response(version string) ([]byte, error)
 }
 
-// k8sTokenGenerator implements the TokenGenerator interface.
-type k8sTokenGenerator struct {
-	Command       string
-	TokenResponse TokenResponse
+// k8sGenerator implements the TokenGenerator interface.
+type k8sGenerator struct {
+	Command string
+	Details Details
 }
 
-// TokenResponse represents data used in responses to allocate_k8s_token
-// extension requests. For v1, only Token will be populated/returned, and for v2
-// all fields should have values and will be returned as JSON.
-type TokenResponse struct {
+// details represents data used in responses to allocate_k8s_token extension
+// requests. For v1, only Token will be populated/returned, and for v2 all
+// fields should have values and will be returned as JSON.
+type Details struct {
 	APIAddress string `json:"api_address"`
 	Token      string `json:"token"`
 	CAHash     string `json:"ca_hash"`
 }
 
 // Create generates a new k8s token.
-func (g *k8sTokenGenerator) Create(target string) error {
+func (g *k8sGenerator) Create(target string) error {
 	args := []string{
 		"token", "create", "--ttl", "5m", "--print-join-command",
 		"--description", "Allow " + target + " to join the cluster",
@@ -68,27 +68,27 @@ func (g *k8sTokenGenerator) Create(target string) error {
 	if len(fields) != 7 {
 		return fmt.Errorf("bad join command: %s", string(output))
 	}
-	g.TokenResponse.APIAddress = fields[2]
-	g.TokenResponse.Token = fields[4]
-	g.TokenResponse.CAHash = fields[6]
+	g.Details.APIAddress = fields[2]
+	g.Details.Token = fields[4]
+	g.Details.CAHash = fields[6]
 
 	return nil
 }
 
 // Response returns an appropriate response body for the incoming request, based
 // on the API version.
-func (g *k8sTokenGenerator) Response(version string) ([]byte, error) {
+func (g *k8sGenerator) Response(version string) ([]byte, error) {
 	if version == "v1" {
-		return []byte(g.TokenResponse.Token), nil
+		return []byte(g.Details.Token), nil
 	}
-	return json.Marshal(g.TokenResponse)
+	return json.Marshal(g.Details)
 }
 
 // New returns a partially populated k8sTokenGenerator
-func New(bindir string) *k8sTokenGenerator {
-	return &k8sTokenGenerator{
-		Command:       bindir + "/kubeadm",
-		TokenResponse: TokenResponse{},
+func New(bindir string) *k8sGenerator {
+	return &k8sGenerator{
+		Command: bindir + "/kubeadm",
+		Details: Details{},
 	}
 
 }

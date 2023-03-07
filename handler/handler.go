@@ -6,19 +6,19 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/m-lab/epoxy-extensions/allocate_k8s_token"
-	"github.com/m-lab/epoxy-extensions/bmc_store_password"
+	token "github.com/m-lab/epoxy-extensions/allocate_k8s_token"
+	bmc "github.com/m-lab/epoxy-extensions/bmc_store_password"
 	"github.com/m-lab/epoxy/extension"
 )
 
-// k8sToken is the struct used to interact with the allocate_k8s_token package.
+// k8sToken is the struct used to interact with the token package.
 type k8sToken struct {
-	generator allocate_k8s_token.TokenGenerator
+	generator token.Generator
 	version   string
 }
 
 // ServeHTTP is the request handler for the allocate_k8s_token requests.
-func (kt *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (k *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var body []byte
 
 	// Require requests to be POSTs.
@@ -43,7 +43,7 @@ func (kt *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	log.Println("Request:", ext.Encode())
 
-	err = kt.generator.Create(ext.V1.Hostname)
+	err = k.generator.Create(ext.V1.Hostname)
 	if err != nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -51,13 +51,13 @@ func (kt *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	// A v1 response is just a string (the token), whereas a v2 response will be JSON.
-	if kt.version == "v1" {
+	if k.version == "v1" {
 		resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	} else {
 		resp.Header().Set("Content-Type", "application/json; charset=utf-8")
 	}
 
-	body, err = kt.generator.Response(kt.version)
+	body, err = k.generator.Response(k.version)
 	if err != nil {
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
@@ -69,7 +69,7 @@ func (kt *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 // bmcPassword is the struct used to interact with the bmc_store_password package.
 type bmcPassword struct {
-	password bmc_store_password.Password
+	password bmc.Password
 }
 
 // ServeHTTP is the request handler for the allocate_k8s_token requests.
@@ -133,7 +133,7 @@ func decodeMessage(req *http.Request) (*extension.Request, error) {
 }
 
 // NewK8sToken returns a new k8sToken object.
-func NewK8sToken(version string, generator allocate_k8s_token.TokenGenerator) http.Handler {
+func NewK8sToken(version string, generator token.Generator) http.Handler {
 	return &k8sToken{
 		generator: generator,
 		version:   version,
@@ -141,7 +141,7 @@ func NewK8sToken(version string, generator allocate_k8s_token.TokenGenerator) ht
 }
 
 // NewBmcPassword return a new bmcPassword object.
-func NewBmcPassword(password bmc_store_password.Password) http.Handler {
+func NewBmcPassword(password bmc.Password) http.Handler {
 	return &bmcPassword{
 		password: password,
 	}

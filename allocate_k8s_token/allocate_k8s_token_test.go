@@ -1,4 +1,4 @@
-package allocate_k8s_token
+package token
 
 import (
 	"fmt"
@@ -48,8 +48,8 @@ func Test_Response(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &k8sTokenGenerator{
-				TokenResponse: TokenResponse{
+			g := &k8sGenerator{
+				Details: Details{
 					APIAddress: testAPIAddress,
 					CAHash:     testCAHash,
 					Token:      testToken,
@@ -71,13 +71,13 @@ func Test_Response(t *testing.T) {
 func Test_Create(t *testing.T) {
 	tests := []struct {
 		name    string
-		expect  TokenResponse
+		expect  Details
 		result  string
 		wantErr bool
 	}{
 		{
 			name: "success",
-			expect: TokenResponse{
+			expect: Details{
 				APIAddress: "api.example.com:6443",
 				CAHash:     "sha256:hash",
 				Token:      "testtoken",
@@ -101,13 +101,13 @@ func Test_Create(t *testing.T) {
 			localCommander = &fakeRunCommand{
 				result: tt.result,
 			}
-			g := &k8sTokenGenerator{}
+			g := &k8sGenerator{}
 			err := g.Create("test")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Create(): error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if g.TokenResponse != tt.expect {
-				t.Errorf("Create() = %q, want %q", g.TokenResponse, tt.expect)
+			if g.Details != tt.expect {
+				t.Errorf("Create() = %q, want %q", g.Details, tt.expect)
 			}
 		})
 	}
