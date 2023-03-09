@@ -26,7 +26,7 @@ type fakeTokenGenerator struct {
 	version  string
 }
 
-func (g *fakeTokenGenerator) Create(target string) error {
+func (g *fakeTokenGenerator) Create(target string, args []string) error {
 	if g.response.Token == "" {
 		return fmt.Errorf("failed to generate token")
 	}

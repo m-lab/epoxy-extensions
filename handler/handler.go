@@ -34,6 +34,11 @@ func (k *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	commandArgs := []string{
+		"token", "create", "--ttl", "5m", "--print-join-command",
+		"--description", "Allow " + ext.V1.Hostname + " to join the cluster",
+	}
+
 	if time.Now().UTC().Sub(ext.V1.LastBoot) > 120*time.Minute {
 		// According to ePoxy the machine booted over 2 hours ago,
 		// which is longer than we're willing to support.
@@ -43,7 +48,7 @@ func (k *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	log.Println("Request:", ext.Encode())
 
-	err = k.generator.Create(ext.V1.Hostname)
+	err = k.generator.Create(ext.V1.Hostname, commandArgs)
 	if err != nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -72,7 +77,7 @@ type bmcPassword struct {
 	password bmc.Password
 }
 
-// ServeHTTP is the request handler for the allocate_k8s_token requests.
+// ServeHTTP is the request handler for allocate_k8s_token requests.
 func (bp *bmcPassword) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var reqPassword string
 

@@ -11,11 +11,11 @@ var (
 	testToken      string = "012345.abcdefghijklmnop"
 )
 
-type fakeRunCommand struct {
+type fakeTokenCommand struct {
 	result string
 }
 
-func (c *fakeRunCommand) Command(prog string, args ...string) ([]byte, error) {
+func (c *fakeTokenCommand) Command(prog string, args ...string) ([]byte, error) {
 	if c.result == "" {
 		return nil, fmt.Errorf("command failed")
 	}
@@ -98,11 +98,12 @@ func Test_Create(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			localCommander = &fakeRunCommand{
-				result: tt.result,
+			g := &k8sGenerator{
+				Commander: &fakeTokenCommand{
+					result: tt.result,
+				},
 			}
-			g := &k8sGenerator{}
-			err := g.Create("test")
+			err := g.Create("test", []string{"fake", "args"})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Create(): error = %v, wantErr %v", err, tt.wantErr)
 			}

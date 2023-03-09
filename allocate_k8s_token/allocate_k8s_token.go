@@ -9,36 +9,30 @@ import (
 	"strings"
 )
 
-var (
-	localCommander commander = &runCommand{}
-)
-
-// commander is an interface that is used to wrap os/exec.Command() for testing purposes.
-type commander interface {
+// Commander is an interface that is used to wrap os/exec.Command() for testing purposes.
+type Commander interface {
 	Command(prog string, args ...string) ([]byte, error)
 }
 
-// runCommand implements the commander interface.
-type runCommand struct{}
+// tokenCommand implements the token.Commander interface.
+type TokenCommand struct{}
 
-// Command takes a program name and arguments as parameters and hands those off
-// to exec.Command. It exists as a wrapper to exec.Command to faciliate
-// testing. It has the same return types as exec.Command: ([]byte, error).
-func (c *runCommand) Command(prog string, args ...string) ([]byte, error) {
+func (tc *TokenCommand) Command(prog string, args ...string) ([]byte, error) {
 	cmd := exec.Command(prog, args...)
 	return cmd.Output()
 }
 
 // Generator defines the interface for creating tokens.
 type Generator interface {
-	Create(target string) error // Generate a new token.
+	Create(target string, args []string) error // Generate a new token.
 	Response(version string) ([]byte, error)
 }
 
-// k8sGenerator implements the TokenGenerator interface.
+// k8sGenerator implements the Generator interface.
 type k8sGenerator struct {
-	Command string
-	Details Details
+	Command   string
+	Commander Commander
+	Details   Details
 }
 
 // details represents data used in responses to allocate_k8s_token extension
@@ -51,13 +45,9 @@ type Details struct {
 }
 
 // Create generates a new k8s token.
-func (g *k8sGenerator) Create(target string) error {
-	args := []string{
-		"token", "create", "--ttl", "5m", "--print-join-command",
-		"--description", "Allow " + target + " to join the cluster",
-	}
+func (g *k8sGenerator) Create(target string, args []string) error {
 	// Allocate the token for the given hostname.
-	output, err := localCommander.Command(g.Command, args...)
+	output, err := g.Commander.Command(g.Command, args...)
 	if err != nil {
 		return err
 	}
@@ -85,10 +75,11 @@ func (g *k8sGenerator) Response(version string) ([]byte, error) {
 }
 
 // New returns a partially populated k8sTokenGenerator
-func New(bindir string) *k8sGenerator {
+func New(bindir string, commander Commander) *k8sGenerator {
 	return &k8sGenerator{
-		Command: bindir + "/kubeadm",
-		Details: Details{},
+		Command:   bindir + "/kubeadm",
+		Commander: commander,
+		Details:   Details{},
 	}
 
 }

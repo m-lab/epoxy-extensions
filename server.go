@@ -36,7 +36,9 @@ func init() {
 func main() {
 	flag.Parse()
 
-	k8sToken := token.New(fBinDir)
+	tc := &token.TokenCommand{}
+
+	k8sToken := token.New(fBinDir, tc)
 	bmcPassword := bmc.New()
 
 	http.HandleFunc("/", rootHandler)
