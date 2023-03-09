@@ -74,7 +74,7 @@ func (g *k8sGenerator) Response(version string) ([]byte, error) {
 	return json.Marshal(g.Details)
 }
 
-// New returns a partially populated k8sTokenGenerator
+// New returns a partially populated k8sGenerator
 func New(bindir string, commander Commander) Generator {
 	return &k8sGenerator{
 		Command:   bindir + "/kubeadm",

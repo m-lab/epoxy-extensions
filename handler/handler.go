@@ -15,7 +15,7 @@ import (
 // accept requests from that host.
 const maxUptime time.Duration = 120 * time.Minute
 
-// k8sToken implements the http.Handler interface and is the struct used to
+// tokenHandler implements the http.Handler interface and is the struct used to
 // interact with the token package.
 type tokenHandler struct {
 	generator token.Generator
@@ -39,11 +39,6 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	commandArgs := []string{
-		"token", "create", "--ttl", "5m", "--print-join-command",
-		"--description", "Allow " + ext.V1.Hostname + " to join the cluster",
-	}
-
 	if time.Since(ext.V1.LastBoot) > maxUptime {
 		// According to ePoxy the machine booted over 2 hours ago,
 		// which is longer than we're willing to support.
@@ -52,6 +47,11 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Println("Request:", ext.Encode())
+
+	commandArgs := []string{
+		"token", "create", "--ttl", "5m", "--print-join-command",
+		"--description", "Allow " + ext.V1.Hostname + " to join the cluster",
+	}
 
 	err = t.generator.Create(ext.V1.Hostname, commandArgs)
 	if err != nil {
