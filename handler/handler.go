@@ -11,6 +11,10 @@ import (
 	"github.com/m-lab/epoxy/extension"
 )
 
+// The maximum amount of time since a machine has booted that extension will
+// accept requests from that host.
+const maxUptime time.Duration = 120 * time.Minute
+
 // k8sToken implements the http.Handler interface and is the struct used to
 // interact with the token package.
 type tokenHandler struct {
@@ -40,7 +44,7 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		"--description", "Allow " + ext.V1.Hostname + " to join the cluster",
 	}
 
-	if time.Now().UTC().Sub(ext.V1.LastBoot) > 120*time.Minute {
+	if time.Since(ext.V1.LastBoot) > maxUptime {
 		// According to ePoxy the machine booted over 2 hours ago,
 		// which is longer than we're willing to support.
 		resp.WriteHeader(http.StatusRequestTimeout)
@@ -98,7 +102,7 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if time.Now().UTC().Sub(ext.V1.LastBoot) > 120*time.Minute {
+	if time.Since(ext.V1.LastBoot) > maxUptime {
 		// According to ePoxy the machine booted over 2 hours ago,
 		// which is longer than we're willing to support.
 		resp.WriteHeader(http.StatusRequestTimeout)
