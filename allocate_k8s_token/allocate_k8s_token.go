@@ -14,10 +14,10 @@ type Commander interface {
 	Command(prog string, args ...string) ([]byte, error)
 }
 
-// tokenCommand implements the token.Commander interface.
-type TokenCommand struct{}
+// K8sCommand implements the Commander interface.
+type K8sCommand struct{}
 
-func (tc *TokenCommand) Command(prog string, args ...string) ([]byte, error) {
+func (tc *K8sCommand) Command(prog string, args ...string) ([]byte, error) {
 	cmd := exec.Command(prog, args...)
 	return cmd.Output()
 }
@@ -75,7 +75,7 @@ func (g *k8sGenerator) Response(version string) ([]byte, error) {
 }
 
 // New returns a partially populated k8sTokenGenerator
-func New(bindir string, commander Commander) *k8sGenerator {
+func New(bindir string, commander Commander) Generator {
 	return &k8sGenerator{
 		Command:   bindir + "/kubeadm",
 		Commander: commander,

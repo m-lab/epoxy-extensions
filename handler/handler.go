@@ -11,13 +11,14 @@ import (
 	"github.com/m-lab/epoxy/extension"
 )
 
-// k8sToken is the struct used to interact with the token package.
+// k8sToken implements the http.Handler interface and is the struct used to
+// interact with the token package.
 type k8sToken struct {
 	generator token.Generator
 	version   string
 }
 
-// ServeHTTP is the request handler for the allocate_k8s_token requests.
+// ServeHTTP is the request handler for allocate_k8s_token requests.
 func (k *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var body []byte
 
@@ -72,7 +73,8 @@ func (k *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.Write(body)
 }
 
-// bmcPassword is the struct used to interact with the bmc_store_password package.
+// bmcPassword implements the http.Handler interface and is the struct used to
+// interact with the bmc_store_password package.
 type bmcPassword struct {
 	password bmc.Password
 }
@@ -137,7 +139,8 @@ func decodeMessage(req *http.Request) (*extension.Request, error) {
 	return ext, err
 }
 
-// NewK8sToken returns a new k8sToken object.
+// NewK8sToken returns a new k8sToken struct, which implements the http.Handler
+// interface.
 func NewK8sToken(version string, generator token.Generator) http.Handler {
 	return &k8sToken{
 		generator: generator,
@@ -145,7 +148,8 @@ func NewK8sToken(version string, generator token.Generator) http.Handler {
 	}
 }
 
-// NewBmcPassword return a new bmcPassword object.
+// NewBmcPassword returns a new bmcPassword struct, which implmements the
+// http.Hanlder interface.
 func NewBmcPassword(password bmc.Password) http.Handler {
 	return &bmcPassword{
 		password: password,
