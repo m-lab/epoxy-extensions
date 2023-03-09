@@ -13,13 +13,13 @@ import (
 
 // k8sToken implements the http.Handler interface and is the struct used to
 // interact with the token package.
-type k8sToken struct {
+type tokenHandler struct {
 	generator token.Generator
 	version   string
 }
 
 // ServeHTTP is the request handler for allocate_k8s_token requests.
-func (k *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var body []byte
 
 	// Require requests to be POSTs.
@@ -49,7 +49,7 @@ func (k *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	log.Println("Request:", ext.Encode())
 
-	err = k.generator.Create(ext.V1.Hostname, commandArgs)
+	err = t.generator.Create(ext.V1.Hostname, commandArgs)
 	if err != nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -57,13 +57,13 @@ func (k *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	// A v1 response is just a string (the token), whereas a v2 response will be JSON.
-	if k.version == "v1" {
+	if t.version == "v1" {
 		resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	} else {
 		resp.Header().Set("Content-Type", "application/json; charset=utf-8")
 	}
 
-	body, err = k.generator.Response(k.version)
+	body, err = t.generator.Response(t.version)
 	if err != nil {
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
@@ -73,14 +73,14 @@ func (k *k8sToken) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.Write(body)
 }
 
-// bmcPassword implements the http.Handler interface and is the struct used to
+// bmcHandler implements the http.Handler interface and is the struct used to
 // interact with the bmc_store_password package.
-type bmcPassword struct {
+type bmcHandler struct {
 	password bmc.Password
 }
 
 // ServeHTTP is the request handler for allocate_k8s_token requests.
-func (b *bmcPassword) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var reqPassword string
 
 	// Require requests to be POSTs.
@@ -139,19 +139,19 @@ func decodeMessage(req *http.Request) (*extension.Request, error) {
 	return ext, err
 }
 
-// NewK8sToken returns a new k8sToken struct, which implements the http.Handler
+// NewTokenHandler returns a new tokenHandler, which implements the http.Handler
 // interface.
-func NewK8sToken(version string, generator token.Generator) http.Handler {
-	return &k8sToken{
+func NewTokenHandler(version string, generator token.Generator) http.Handler {
+	return &tokenHandler{
 		generator: generator,
 		version:   version,
 	}
 }
 
-// NewBmcPassword returns a new bmcPassword struct, which implmements the
+// NewBmcHandler returns a new bmcHandler, which implmements the
 // http.Hanlder interface.
-func NewBmcPassword(password bmc.Password) http.Handler {
-	return &bmcPassword{
+func NewBmcHandler(password bmc.Password) http.Handler {
+	return &bmcHandler{
 		password: password,
 	}
 }

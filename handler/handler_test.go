@@ -132,7 +132,7 @@ func Test_k8sToken(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			k8sToken := NewK8sToken(tt.version, fg)
+			k8sToken := NewTokenHandler(tt.version, fg)
 			ext := extension.Request{V1: tt.v1}
 			req := httptest.NewRequest(
 				tt.method, "/allocate_k8s_token", strings.NewReader(ext.Encode()))
@@ -229,7 +229,7 @@ func Test_bmcPassword(t *testing.T) {
 	for _, tt := range tests {
 		fp := &fakePassword{}
 		t.Run(tt.name, func(t *testing.T) {
-			f := NewBmcPassword(fp)
+			f := NewBmcHandler(fp)
 			ext := extension.Request{V1: tt.v1}
 			req := httptest.NewRequest(
 				tt.method, "/v1/bmc-store-password?p="+tt.password, strings.NewReader(ext.Encode()))

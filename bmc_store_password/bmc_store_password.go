@@ -25,10 +25,10 @@ type Password interface {
 	Store(target string, password string) error
 }
 
-type bmcPassword struct{}
+type gcdPassword struct{}
 
 // Store stores a BMC password in GCD.
-func (p *bmcPassword) Store(hostname string, password string) error {
+func (g *gcdPassword) Store(hostname string, password string) error {
 	parts, err := host.Parse(hostname)
 	if err != nil {
 		return fmt.Errorf("could not parse hostname: %s", hostname)
@@ -63,5 +63,5 @@ func (p *bmcPassword) Store(hostname string, password string) error {
 }
 
 func New() Password {
-	return &bmcPassword{}
+	return &gcdPassword{}
 }
