@@ -80,7 +80,7 @@ type bmcPassword struct {
 }
 
 // ServeHTTP is the request handler for allocate_k8s_token requests.
-func (bp *bmcPassword) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (b *bmcPassword) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var reqPassword string
 
 	// Require requests to be POSTs.
@@ -121,7 +121,7 @@ func (bp *bmcPassword) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = bp.password.Store(ext.V1.Hostname, reqPassword)
+	err = b.password.Store(ext.V1.Hostname, reqPassword)
 	if err != nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusInternalServerError)

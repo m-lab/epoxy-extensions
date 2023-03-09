@@ -62,6 +62,6 @@ func (p *bmcPassword) Store(hostname string, password string) error {
 	return nil
 }
 
-func New() *bmcPassword {
+func New() Password {
 	return &bmcPassword{}
 }
