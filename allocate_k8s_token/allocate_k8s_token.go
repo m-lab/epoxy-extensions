@@ -24,7 +24,7 @@ func (tc *K8sCommand) Command(prog string, args ...string) ([]byte, error) {
 
 // Generator defines the interface for creating tokens.
 type Generator interface {
-	Create(target string, args []string) error // Generate a new token.
+	Create(target string) error // Generate a new token.
 	Response(version string) ([]byte, error)
 }
 
@@ -32,10 +32,11 @@ type Generator interface {
 type k8sGenerator struct {
 	Command   string
 	Commander Commander
+	Args      []string
 	Details   Details
 }
 
-// details represents data used in responses to allocate_k8s_token extension
+// Details represents data used in responses to allocate_k8s_token extension
 // requests. For v1, only Token will be populated/returned, and for v2 all
 // fields should have values and will be returned as JSON.
 type Details struct {
@@ -45,9 +46,9 @@ type Details struct {
 }
 
 // Create generates a new k8s token.
-func (g *k8sGenerator) Create(target string, args []string) error {
+func (g *k8sGenerator) Create(target string) error {
 	// Allocate the token for the given hostname.
-	output, err := g.Commander.Command(g.Command, args...)
+	output, err := g.Commander.Command(g.Command, g.Args...)
 	if err != nil {
 		return err
 	}
@@ -75,10 +76,11 @@ func (g *k8sGenerator) Response(version string) ([]byte, error) {
 }
 
 // New returns a partially populated k8sGenerator
-func New(bindir string, commander Commander) Generator {
+func New(bindir string, commander Commander, args []string) Generator {
 	return &k8sGenerator{
 		Command:   bindir + "/kubeadm",
 		Commander: commander,
+		Args:      args,
 		Details:   Details{},
 	}
 

@@ -20,15 +20,15 @@ var (
 	credsNewProvider = creds.NewProvider
 )
 
-// password defines the interface for storing BMC passwords.
-type Password interface {
-	Store(target string, password string) error
+// PasswordStore defines the interface for storing BMC passwords.
+type PasswordStore interface {
+	Put(target string, password string) error
 }
 
-type gcdPassword struct{}
+type gcdPasswordStore struct{}
 
-// Store stores a BMC password in GCD.
-func (g *gcdPassword) Store(hostname string, password string) error {
+// Put stores a BMC password in GCD.
+func (g *gcdPasswordStore) Put(hostname string, password string) error {
 	parts, err := host.Parse(hostname)
 	if err != nil {
 		return fmt.Errorf("could not parse hostname: %s", hostname)
@@ -62,6 +62,6 @@ func (g *gcdPassword) Store(hostname string, password string) error {
 	return nil
 }
 
-func New() Password {
-	return &gcdPassword{}
+func New() PasswordStore {
+	return &gcdPasswordStore{}
 }

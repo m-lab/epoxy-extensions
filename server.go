@@ -37,7 +37,11 @@ func main() {
 	flag.Parse()
 
 	kc := &token.K8sCommand{}
-	k8sToken := token.New(fBinDir, kc)
+	args := []string{
+		"token", "create", "--ttl", "5m", "--print-join-command",
+		"--description", "Allow machine to join the cluster",
+	}
+	k8sToken := token.New(fBinDir, kc, args)
 	bmcPassword := bmc.New()
 
 	http.HandleFunc("/", rootHandler)

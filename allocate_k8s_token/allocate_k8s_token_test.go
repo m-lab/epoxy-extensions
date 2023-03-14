@@ -103,7 +103,7 @@ func Test_Create(t *testing.T) {
 					result: tt.result,
 				},
 			}
-			err := g.Create("test", []string{"fake", "args"})
+			err := g.Create("test-host")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Create(): error = %v, wantErr %v", err, tt.wantErr)
 			}

@@ -48,12 +48,7 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	log.Println("Request:", ext.Encode())
 
-	commandArgs := []string{
-		"token", "create", "--ttl", "5m", "--print-join-command",
-		"--description", "Allow " + ext.V1.Hostname + " to join the cluster",
-	}
-
-	err = t.generator.Create(ext.V1.Hostname, commandArgs)
+	err = t.generator.Create(ext.V1.Hostname)
 	if err != nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -80,7 +75,7 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 // bmcHandler implements the http.Handler interface and is the struct used to
 // interact with the bmc_store_password package.
 type bmcHandler struct {
-	password bmc.Password
+	password bmc.PasswordStore
 }
 
 // ServeHTTP is the request handler for allocate_k8s_token requests.
@@ -125,7 +120,7 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = b.password.Store(ext.V1.Hostname, reqPassword)
+	err = b.password.Put(ext.V1.Hostname, reqPassword)
 	if err != nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -154,7 +149,7 @@ func NewTokenHandler(version string, generator token.Generator) http.Handler {
 
 // NewBmcHandler returns a new bmcHandler, which implmements the
 // http.Hanlder interface.
-func NewBmcHandler(password bmc.Password) http.Handler {
+func NewBmcHandler(password bmc.PasswordStore) http.Handler {
 	return &bmcHandler{
 		password: password,
 	}

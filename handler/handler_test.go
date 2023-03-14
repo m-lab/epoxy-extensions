@@ -26,7 +26,7 @@ type fakeTokenGenerator struct {
 	version  string
 }
 
-func (g *fakeTokenGenerator) Create(target string, args []string) error {
+func (g *fakeTokenGenerator) Create(target string) error {
 	if g.response.Token == "" {
 		return fmt.Errorf("failed to generate token")
 	}
@@ -41,9 +41,9 @@ func (g *fakeTokenGenerator) Response(version string) ([]byte, error) {
 	return json.Marshal(g.response)
 }
 
-type fakePassword struct{}
+type fakePasswordStore struct{}
 
-func (p *fakePassword) Store(hostname string, password string) error {
+func (p *fakePasswordStore) Put(hostname string, password string) error {
 	_, err := host.Parse(hostname)
 	if err != nil {
 		return fmt.Errorf("bad hostname")
@@ -51,7 +51,7 @@ func (p *fakePassword) Store(hostname string, password string) error {
 	return nil
 }
 
-func Test_k8sToken(t *testing.T) {
+func Test_k8sTokenHandler(t *testing.T) {
 	tests := []struct {
 		expect  string
 		method  string
@@ -146,28 +146,28 @@ func Test_k8sToken(t *testing.T) {
 				ct := rec.Result().Header["Content-Type"][0]
 				if tt.version == "v1" {
 					if ct != "text/plain; charset=utf-8" {
-						t.Errorf("k8sToken: expected Content-Type of text/plain, but got %v", ct)
+						t.Errorf("k8sTokenHandler: expected Content-Type of text/plain, but got %v", ct)
 					}
 				} else {
 					if ct != "application/json; charset=utf-8" {
-						t.Errorf("k8sToken: expected Content-Type of application/json, but got %v", ct)
+						t.Errorf("k8sTokenHandler: expected Content-Type of application/json, but got %v", ct)
 					}
 
 				}
 			}
 			if tt.status != rec.Code {
-				t.Errorf("k8sToken: bad status code: got %d; want %d",
+				t.Errorf("k8sTokenHandler: bad status code: got %d; want %d",
 					rec.Code, tt.status)
 			}
 			if rec.Body.String() != tt.expect {
-				t.Errorf("k8sToken: bad token returned: got %q; want %q",
+				t.Errorf("k8sTokenHandler: bad token returned: got %q; want %q",
 					rec.Body.String(), tt.token)
 			}
 		})
 	}
 }
 
-func Test_bmcPassword(t *testing.T) {
+func Test_bmcPasswordStore(t *testing.T) {
 	tests := []struct {
 		name     string
 		method   string
@@ -227,7 +227,7 @@ func Test_bmcPassword(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		fp := &fakePassword{}
+		fp := &fakePasswordStore{}
 		t.Run(tt.name, func(t *testing.T) {
 			f := NewBmcHandler(fp)
 			ext := extension.Request{V1: tt.v1}
@@ -238,7 +238,7 @@ func Test_bmcPassword(t *testing.T) {
 			f.ServeHTTP(rec, req)
 
 			if tt.status != rec.Code {
-				t.Errorf("bmcPassword: bad status code: got %d; want %d",
+				t.Errorf("bmcPasswordStore: bad status code: got %d; want %d",
 					rec.Code, tt.status)
 			}
 		})
