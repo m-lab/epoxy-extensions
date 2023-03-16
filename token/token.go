@@ -9,30 +9,33 @@ import (
 	"strings"
 )
 
+var commandArgs []string = []string{
+	"token", "create", "--ttl", "5m", "--print-join-command",
+}
+
 // Commander is an interface that is used to wrap os/exec.Command() for testing purposes.
 type Commander interface {
 	Command(prog string, args ...string) ([]byte, error)
 }
 
-// K8sCommand implements the Commander interface.
-type K8sCommand struct{}
+// TokenCommand implements the Commander interface.
+type TokenCommand struct{}
 
-func (tc *K8sCommand) Command(prog string, args ...string) ([]byte, error) {
+func (tc *TokenCommand) Command(prog string, args ...string) ([]byte, error) {
 	cmd := exec.Command(prog, args...)
 	return cmd.Output()
 }
 
-// Generator defines the interface for creating tokens.
-type Generator interface {
+// Manager defines the interface for working with tokens.
+type Manager interface {
 	Create(target string) error // Generate a new token.
 	Response(version string) ([]byte, error)
 }
 
-// k8sGenerator implements the Generator interface.
-type k8sGenerator struct {
+// TokenManager implements the Manager interface.
+type TokenManager struct {
 	Command   string
 	Commander Commander
-	Args      []string
 	Details   Details
 }
 
@@ -46,9 +49,11 @@ type Details struct {
 }
 
 // Create generates a new k8s token.
-func (g *k8sGenerator) Create(target string) error {
+func (t *TokenManager) Create(target string) error {
+	desc := fmt.Sprintf("Allow %s to join the cluster", target)
+	commandArgs = append(commandArgs, "--description", desc)
 	// Allocate the token for the given hostname.
-	output, err := g.Commander.Command(g.Command, g.Args...)
+	output, err := t.Commander.Command(t.Command, commandArgs...)
 	if err != nil {
 		return err
 	}
@@ -59,28 +64,27 @@ func (g *k8sGenerator) Create(target string) error {
 	if len(fields) != 7 {
 		return fmt.Errorf("bad join command: %s", string(output))
 	}
-	g.Details.APIAddress = fields[2]
-	g.Details.Token = fields[4]
-	g.Details.CAHash = fields[6]
+	t.Details.APIAddress = fields[2]
+	t.Details.Token = fields[4]
+	t.Details.CAHash = fields[6]
 
 	return nil
 }
 
 // Response returns an appropriate response body for the incoming request, based
 // on the API version.
-func (g *k8sGenerator) Response(version string) ([]byte, error) {
+func (t *TokenManager) Response(version string) ([]byte, error) {
 	if version == "v1" {
-		return []byte(g.Details.Token), nil
+		return []byte(t.Details.Token), nil
 	}
-	return json.Marshal(g.Details)
+	return json.Marshal(t.Details)
 }
 
-// New returns a partially populated k8sGenerator
-func New(bindir string, commander Commander, args []string) Generator {
-	return &k8sGenerator{
+// New returns a TokenManager.
+func New(bindir string, commander Commander) Manager {
+	return &TokenManager{
 		Command:   bindir + "/kubeadm",
 		Commander: commander,
-		Args:      args,
 		Details:   Details{},
 	}
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	token "github.com/m-lab/epoxy-extensions/allocate_k8s_token"
+	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
 	"github.com/m-lab/go/host"
 )
@@ -20,25 +20,25 @@ var (
 	testToken      string = "012345.abcdefghijklmnop"
 )
 
-type fakeTokenGenerator struct {
+type fakeTokenManager struct {
 	response token.Details
 	token    string
 	version  string
 }
 
-func (g *fakeTokenGenerator) Create(target string) error {
-	if g.response.Token == "" {
+func (t *fakeTokenManager) Create(target string) error {
+	if t.response.Token == "" {
 		return fmt.Errorf("failed to generate token")
 	}
-	g.response.Token = g.token
+	t.response.Token = t.token
 	return nil
 }
 
-func (g *fakeTokenGenerator) Response(version string) ([]byte, error) {
-	if g.version == "v1" {
-		return []byte(g.token), nil
+func (t *fakeTokenManager) Response(version string) ([]byte, error) {
+	if t.version == "v1" {
+		return []byte(t.token), nil
 	}
-	return json.Marshal(g.response)
+	return json.Marshal(t.response)
 }
 
 type fakePasswordStore struct{}
@@ -51,7 +51,7 @@ func (p *fakePasswordStore) Put(hostname string, password string) error {
 	return nil
 }
 
-func Test_k8sTokenHandler(t *testing.T) {
+func Test_tokenHandler(t *testing.T) {
 	tests := []struct {
 		expect  string
 		method  string
@@ -121,7 +121,7 @@ func Test_k8sTokenHandler(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		fg := &fakeTokenGenerator{
+		fg := &fakeTokenManager{
 			response: token.Details{
 				APIAddress: testAPIAddress,
 				CAHash:     testCAHash,
@@ -167,7 +167,7 @@ func Test_k8sTokenHandler(t *testing.T) {
 	}
 }
 
-func Test_bmcPasswordStore(t *testing.T) {
+func Test_bmcHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		method   string
@@ -207,7 +207,7 @@ func Test_bmcPasswordStore(t *testing.T) {
 			password: "54321abcdefghijklmnop",
 		},
 		{
-			name:     "failure-bad-request",
+			name:     "failure-bad-request-v1-nil",
 			method:   "POST",
 			v1:       nil,
 			status:   http.StatusBadRequest,
@@ -223,6 +223,30 @@ func Test_bmcPasswordStore(t *testing.T) {
 				RawQuery:    "p=somepass&z=lol",
 			},
 			status:   http.StatusRequestTimeout,
+			password: "testpassword",
+		},
+		{
+			name:   "failure-invalid-query-with-semicolon",
+			method: "POST",
+			v1: &extension.V1{
+				Hostname:    "mlab1-foo01.mlab-oti.measurement-lab.org",
+				IPv4Address: "192.168.1.1",
+				LastBoot:    time.Now().UTC().Add(-5 * time.Minute),
+				RawQuery:    "p=somepass&;z=lol",
+			},
+			status:   http.StatusInternalServerError,
+			password: "testpassword",
+		},
+		{
+			name:   "failure-missing-query-param-p",
+			method: "POST",
+			v1: &extension.V1{
+				Hostname:    "mlab1-foo01.mlab-oti.measurement-lab.org",
+				IPv4Address: "192.168.1.1",
+				LastBoot:    time.Now().UTC().Add(-5 * time.Minute),
+				RawQuery:    "y=somepass&z=lol",
+			},
+			status:   http.StatusBadRequest,
 			password: "testpassword",
 		},
 	}

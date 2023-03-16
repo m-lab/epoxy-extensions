@@ -48,7 +48,7 @@ func Test_Response(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &k8sGenerator{
+			g := &TokenManager{
 				Details: Details{
 					APIAddress: testAPIAddress,
 					CAHash:     testCAHash,
@@ -98,7 +98,7 @@ func Test_Create(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &k8sGenerator{
+			g := &TokenManager{
 				Commander: &fakeTokenCommand{
 					result: tt.result,
 				},

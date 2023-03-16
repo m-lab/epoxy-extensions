@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"time"
 
-	token "github.com/m-lab/epoxy-extensions/allocate_k8s_token"
-	bmc "github.com/m-lab/epoxy-extensions/bmc_store_password"
+	"github.com/m-lab/epoxy-extensions/bmc"
+	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
 )
 
@@ -18,11 +18,11 @@ const maxUptime time.Duration = 120 * time.Minute
 // tokenHandler implements the http.Handler interface and is the struct used to
 // interact with the token package.
 type tokenHandler struct {
-	generator token.Generator
+	generator token.Manager
 	version   string
 }
 
-// ServeHTTP is the request handler for allocate_k8s_token requests.
+// ServeHTTP is the request handler for token requests.
 func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var body []byte
 
@@ -73,12 +73,12 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 }
 
 // bmcHandler implements the http.Handler interface and is the struct used to
-// interact with the bmc_store_password package.
+// interact with the bmc package.
 type bmcHandler struct {
 	password bmc.PasswordStore
 }
 
-// ServeHTTP is the request handler for allocate_k8s_token requests.
+// ServeHTTP is the request handler for token requests.
 func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var reqPassword string
 
@@ -140,7 +140,7 @@ func decodeMessage(req *http.Request) (*extension.Request, error) {
 
 // NewTokenHandler returns a new tokenHandler, which implements the http.Handler
 // interface.
-func NewTokenHandler(version string, generator token.Generator) http.Handler {
+func NewTokenHandler(version string, generator token.Manager) http.Handler {
 	return &tokenHandler{
 		generator: generator,
 		version:   version,

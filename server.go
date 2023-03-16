@@ -6,10 +6,10 @@ import (
 	"log"
 	"net/http"
 
-	token "github.com/m-lab/epoxy-extensions/allocate_k8s_token"
-	bmc "github.com/m-lab/epoxy-extensions/bmc_store_password"
+	"github.com/m-lab/epoxy-extensions/bmc"
 	"github.com/m-lab/epoxy-extensions/handler"
 	"github.com/m-lab/epoxy-extensions/metrics"
+	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -36,12 +36,8 @@ func init() {
 func main() {
 	flag.Parse()
 
-	kc := &token.K8sCommand{}
-	args := []string{
-		"token", "create", "--ttl", "5m", "--print-join-command",
-		"--description", "Allow machine to join the cluster",
-	}
-	k8sToken := token.New(fBinDir, kc, args)
+	tc := &token.TokenCommand{}
+	k8sToken := token.New(fBinDir, tc)
 	bmcPassword := bmc.New()
 
 	http.HandleFunc("/", rootHandler)
