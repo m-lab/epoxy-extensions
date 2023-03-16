@@ -1,5 +1,5 @@
 // bmc_store_password implements the epoxy extension API and provides a way for
-// machines booting with epoxy to store the configured BMC password to GCD.
+// machines booting with epoxy to work with BMSs (iDRACs).
 package bmc
 
 import (
@@ -62,6 +62,7 @@ func (g *gcdPasswordStore) Put(hostname string, password string) error {
 	return nil
 }
 
+// New returns a new PasswordStore.
 func New() PasswordStore {
 	return &gcdPasswordStore{}
 }

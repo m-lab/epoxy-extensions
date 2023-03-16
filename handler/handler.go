@@ -11,15 +11,15 @@ import (
 	"github.com/m-lab/epoxy/extension"
 )
 
-// The maximum amount of time since a machine has booted that extension will
+// The maximum amount of time since a machine has booted that extensions will
 // accept requests from that host.
 const maxUptime time.Duration = 120 * time.Minute
 
 // tokenHandler implements the http.Handler interface and is the struct used to
 // interact with the token package.
 type tokenHandler struct {
-	generator token.Manager
-	version   string
+	manager token.Manager
+	version string
 }
 
 // ServeHTTP is the request handler for token requests.
@@ -48,7 +48,7 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	log.Println("Request:", ext.Encode())
 
-	err = t.generator.Create(ext.V1.Hostname)
+	err = t.manager.Create(ext.V1.Hostname)
 	if err != nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -62,7 +62,7 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		resp.Header().Set("Content-Type", "application/json; charset=utf-8")
 	}
 
-	body, err = t.generator.Response(t.version)
+	body, err = t.manager.Response(t.version)
 	if err != nil {
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
@@ -75,7 +75,7 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 // bmcHandler implements the http.Handler interface and is the struct used to
 // interact with the bmc package.
 type bmcHandler struct {
-	password bmc.PasswordStore
+	passwordStore bmc.PasswordStore
 }
 
 // ServeHTTP is the request handler for token requests.
@@ -120,7 +120,7 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = b.password.Put(ext.V1.Hostname, reqPassword)
+	err = b.passwordStore.Put(ext.V1.Hostname, reqPassword)
 	if err != nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -140,17 +140,17 @@ func decodeMessage(req *http.Request) (*extension.Request, error) {
 
 // NewTokenHandler returns a new tokenHandler, which implements the http.Handler
 // interface.
-func NewTokenHandler(version string, generator token.Manager) http.Handler {
+func NewTokenHandler(version string, manager token.Manager) http.Handler {
 	return &tokenHandler{
-		generator: generator,
-		version:   version,
+		manager: manager,
+		version: version,
 	}
 }
 
 // NewBmcHandler returns a new bmcHandler, which implmements the
 // http.Hanlder interface.
-func NewBmcHandler(password bmc.PasswordStore) http.Handler {
+func NewBmcHandler(store bmc.PasswordStore) http.Handler {
 	return &bmcHandler{
-		password: password,
+		passwordStore: store,
 	}
 }

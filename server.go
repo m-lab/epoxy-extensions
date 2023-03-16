@@ -37,22 +37,22 @@ func main() {
 	flag.Parse()
 
 	tc := &token.TokenCommand{}
-	k8sToken := token.New(fBinDir, tc)
-	bmcPassword := bmc.New()
+	tokenManager := token.New(fBinDir, tc)
+	bmcPasswordStore := bmc.New()
 
 	http.HandleFunc("/", rootHandler)
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/v1/allocate_k8s_token",
 		promhttp.InstrumentHandlerDuration(metrics.TokenRequestDuration,
-			handler.NewTokenHandler("v1", k8sToken)))
+			handler.NewTokenHandler("v1", tokenManager)))
 
 	http.HandleFunc("/v2/allocate_k8s_token",
 		promhttp.InstrumentHandlerDuration(metrics.TokenRequestDuration,
-			handler.NewTokenHandler("v2", k8sToken)))
+			handler.NewTokenHandler("v2", tokenManager)))
 
 	http.HandleFunc("/v1/bmc_store_password",
 		promhttp.InstrumentHandlerDuration(metrics.BMCRequestDuration,
-			handler.NewBmcHandler(bmcPassword)))
+			handler.NewBmcHandler(bmcPasswordStore)))
 
 	log.Printf("Listening on interface: %s", fListenAddress)
 	log.Fatal(http.ListenAndServe(fListenAddress, nil))

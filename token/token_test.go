@@ -22,9 +22,9 @@ func (c *fakeTokenCommand) Command(prog string, args ...string) ([]byte, error) 
 	return []byte(c.result), nil
 }
 
-// There are failure checks for Response(), since the only possible error would
-// be returned by json.Marshal(), which for the most part won't return an error
-// since the input is type constrained.
+// There are no failure checks for Response(), since the only possible error
+// would be returned by json.Marshal(), which for the most part won't return an
+// error since the input is type constrained.
 func Test_Response(t *testing.T) {
 	tests := []struct {
 		name    string

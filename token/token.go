@@ -1,5 +1,6 @@
-// token implements the epoxy extension API and provides a way for machines
-// booting with epoxy to obtain a bootstrap token to join the cluster.
+// token implements the ePoxy extension API and provides a way for machines
+// booting with ePoxy to work with cluster bootstrap tokens, generally to create
+// one for joining the cluster.
 package token
 
 import (
@@ -50,8 +51,11 @@ type Details struct {
 
 // Create generates a new k8s token.
 func (t *TokenManager) Create(target string) error {
+	// Append the --description flag to the slice of arguments, since it is only
+	// after the request has been handled that we know which host the request is for.
 	desc := fmt.Sprintf("Allow %s to join the cluster", target)
 	commandArgs = append(commandArgs, "--description", desc)
+
 	// Allocate the token for the given hostname.
 	output, err := t.Commander.Command(t.Command, commandArgs...)
 	if err != nil {
