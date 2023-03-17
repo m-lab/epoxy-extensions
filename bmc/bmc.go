@@ -18,6 +18,7 @@ const (
 
 var (
 	credsNewProvider = creds.NewProvider
+	netLookupHost    = net.LookupHost
 )
 
 // PasswordStore defines the interface for storing BMC passwords.
@@ -36,7 +37,7 @@ func (g *gcdPasswordStore) Put(hostname string, password string) error {
 
 	bmcHostname := strings.Replace(hostname, parts.Machine, parts.Machine+"d", 1)
 
-	bmcAddr, err := net.LookupHost(bmcHostname)
+	bmcAddr, err := netLookupHost(bmcHostname)
 	if err != nil {
 		return fmt.Errorf("could not resolve BMC hostname: %s", bmcHostname)
 	}

@@ -2,6 +2,7 @@ package token
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -111,5 +112,52 @@ func Test_Create(t *testing.T) {
 				t.Errorf("Create() = %q, want %q", g.Details, tt.expect)
 			}
 		})
+	}
+}
+
+func Test_TokenCommand(t *testing.T) {
+	tests := []struct {
+		name    string
+		prog    string
+		args    []string
+		expect  string
+		wantErr bool
+	}{
+		{
+			name:    "success",
+			prog:    "date",
+			args:    []string{"--date=@1679083030", "+%FT%T"},
+			expect:  "2023-03-17T13:57:10",
+			wantErr: false,
+		},
+		{
+			name:    "failure",
+			prog:    "nosuchfile",
+			args:    []string{"lol", ";-)"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tc := &TokenCommand{}
+			output, err := tc.Command(tt.prog, tt.args...)
+			result := strings.TrimSpace(string(output))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("TokenCommand(): error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if string(result) != tt.expect {
+				t.Errorf("TokenCommand(): expected '%s', got '%s'", tt.expect, output)
+			}
+		})
+	}
+}
+
+func Test_New(t *testing.T) {
+	tc := &TokenCommand{}
+	m := New("/fake/bin", tc)
+	var i interface{} = m
+	_, ok := i.(Manager)
+	if !ok {
+		t.Errorf("New(): expected type Manager, but got %T", m)
 	}
 }

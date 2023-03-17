@@ -24,21 +24,25 @@ type fakeTokenManager struct {
 	response token.Details
 	token    string
 	version  string
+	wantErr  bool
 }
 
-func (t *fakeTokenManager) Create(target string) error {
-	if t.response.Token == "" {
+func (ft *fakeTokenManager) Create(target string) error {
+	if ft.response.Token == "" {
 		return fmt.Errorf("failed to generate token")
 	}
-	t.response.Token = t.token
+	ft.response.Token = ft.token
 	return nil
 }
 
-func (t *fakeTokenManager) Response(version string) ([]byte, error) {
-	if t.version == "v1" {
-		return []byte(t.token), nil
+func (ft *fakeTokenManager) Response(version string) ([]byte, error) {
+	if ft.wantErr {
+		return nil, fmt.Errorf("Error!")
 	}
-	return json.Marshal(t.response)
+	if ft.version == "v1" {
+		return []byte(ft.token), nil
+	}
+	return json.Marshal(ft.response)
 }
 
 type fakePasswordStore struct{}
@@ -60,6 +64,7 @@ func Test_tokenHandler(t *testing.T) {
 		token   string
 		v1      *extension.V1
 		version string
+		wantErr bool
 	}{
 		{
 			name:   "success-v1",
@@ -109,7 +114,7 @@ func Test_tokenHandler(t *testing.T) {
 			status: http.StatusRequestTimeout,
 		},
 		{
-			name:   "failure-failure-to-generate-token",
+			name:   "failure-to-generate-token",
 			method: "POST",
 			v1: &extension.V1{
 				Hostname:    "mlab1-foo01.mlab-sandbox.measurement-lab.org",
@@ -119,26 +124,39 @@ func Test_tokenHandler(t *testing.T) {
 			status: http.StatusInternalServerError,
 			token:  "",
 		},
+		{
+			name:   "failure-json-marshall-error",
+			method: "POST",
+			v1: &extension.V1{
+				Hostname:    "mlab1-foo01.mlab-sandbox.measurement-lab.org",
+				IPv4Address: "192.168.1.1",
+				LastBoot:    time.Now().UTC().Add(-5 * time.Minute),
+			},
+			status:  http.StatusInternalServerError,
+			token:   testToken,
+			version: "v2",
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
-		fg := &fakeTokenManager{
-			response: token.Details{
-				APIAddress: testAPIAddress,
-				CAHash:     testCAHash,
-				Token:      tt.token,
-			},
-			token:   tt.token,
-			version: tt.version,
-		}
-
 		t.Run(tt.name, func(t *testing.T) {
-			k8sToken := NewTokenHandler(tt.version, fg)
+			ft := &fakeTokenManager{
+				response: token.Details{
+					APIAddress: testAPIAddress,
+					CAHash:     testCAHash,
+					Token:      tt.token,
+				},
+				token:   tt.token,
+				version: tt.version,
+				wantErr: tt.wantErr,
+			}
+			th := NewTokenHandler(tt.version, ft)
 			ext := extension.Request{V1: tt.v1}
 			req := httptest.NewRequest(
 				tt.method, "/allocate_k8s_token", strings.NewReader(ext.Encode()))
 			rec := httptest.NewRecorder()
 
-			k8sToken.ServeHTTP(rec, req)
+			th.ServeHTTP(rec, req)
 
 			// v1 response should be a simple string, while a v2 response should
 			// be JSON and have a content-type to support it.
@@ -146,21 +164,21 @@ func Test_tokenHandler(t *testing.T) {
 				ct := rec.Result().Header["Content-Type"][0]
 				if tt.version == "v1" {
 					if ct != "text/plain; charset=utf-8" {
-						t.Errorf("k8sTokenHandler: expected Content-Type of text/plain, but got %v", ct)
+						t.Errorf("TokenHandler: expected Content-Type of text/plain, but got %v", ct)
 					}
 				} else {
 					if ct != "application/json; charset=utf-8" {
-						t.Errorf("k8sTokenHandler: expected Content-Type of application/json, but got %v", ct)
+						t.Errorf("TokenHandler: expected Content-Type of application/json, but got %v", ct)
 					}
 
 				}
 			}
 			if tt.status != rec.Code {
-				t.Errorf("k8sTokenHandler: bad status code: got %d; want %d",
+				t.Errorf("TokenHandler: bad status code: got %d; want %d",
 					rec.Code, tt.status)
 			}
 			if rec.Body.String() != tt.expect {
-				t.Errorf("k8sTokenHandler: bad token returned: got %q; want %q",
+				t.Errorf("TokenHandler: bad token returned: got %q; want %q",
 					rec.Body.String(), tt.token)
 			}
 		})
