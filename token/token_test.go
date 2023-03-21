@@ -126,8 +126,8 @@ func Test_TokenCommand(t *testing.T) {
 		{
 			name:    "success",
 			prog:    "date",
-			args:    []string{"--date=@1679083030", "+%FT%T"},
-			expect:  "2023-03-17T13:57:10",
+			args:    []string{"--date=@1679083030", "--utc", "+%FT%T"},
+			expect:  "2023-03-17T19:57:10",
 			wantErr: false,
 		},
 		{
@@ -146,7 +146,7 @@ func Test_TokenCommand(t *testing.T) {
 				t.Errorf("TokenCommand(): error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if result != tt.expect {
-				t.Errorf("TokenCommand(): expected '%s', got '%s'", tt.expect, output)
+				t.Errorf("TokenCommand(): expected '%s', got '%s'", tt.expect, result)
 			}
 		})
 	}
