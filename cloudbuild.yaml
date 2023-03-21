@@ -17,14 +17,9 @@ steps:
   - go test ./... -race
   - go test -v ./...
 
-# Be sure building the bmc-store-password Docker image works.
+# Be sure building the Docker image works.
 - name: gcr.io/cloud-builders/docker
   args: [
-    'build', '--tag=mlab/test:bmc_store_password', '-f', 'Dockerfile.bmc_store_password', '.'
+    'build', '--tag=mlab/epoxy-extensions:test', '.'
   ]
 
-# Be sure building the token_server Docker image works.
-- name: gcr.io/cloud-builders/docker
-  args: [
-    'build', '--tag=mlab/test:token_server', '-f', 'Dockerfile.token_server', '.'
-  ]
