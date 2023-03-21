@@ -145,7 +145,7 @@ func Test_TokenCommand(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("TokenCommand(): error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if string(result) != tt.expect {
+			if result != tt.expect {
 				t.Errorf("TokenCommand(): expected '%s', got '%s'", tt.expect, output)
 			}
 		})
