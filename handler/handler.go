@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/m-lab/epoxy-extensions/bmc"
+	"github.com/m-lab/epoxy-extensions/delete"
 	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
 )
@@ -130,6 +131,47 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusOK)
 }
 
+// deleteHandler implements the http.Handler interface and is the struct used to
+// interact with the delete package.
+type deleteHandler struct {
+	manager delete.Manager
+}
+
+// ServeHTTP is the request handler for delete requests.
+func (d *deleteHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	// Require requests to be POSTs.
+	if req.Method != http.MethodPost {
+		resp.WriteHeader(http.StatusMethodNotAllowed)
+		// Write no response.
+		return
+	}
+
+	ext, err := decodeMessage(req)
+	if err != nil || ext.V1 == nil {
+		log.Println(err)
+		resp.WriteHeader(http.StatusBadRequest)
+		// Write no response.
+		return
+	}
+
+	if time.Since(ext.V1.LastBoot) > maxUptime {
+		// According to ePoxy the machine booted over 2 hours ago,
+		// which is longer than we're willing to support.
+		resp.WriteHeader(http.StatusRequestTimeout)
+		// Write no response.
+		return
+	}
+
+	err = d.manager.Delete(ext.V1.Hostname)
+	if err != nil {
+		log.Println(err)
+		resp.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+}
+
 // decodeMessage takes and http request as input and returns the decoded
 // extension request data.
 func decodeMessage(req *http.Request) (*extension.Request, error) {
@@ -152,5 +194,13 @@ func NewTokenHandler(version string, manager token.Manager) http.Handler {
 func NewBmcHandler(store bmc.PasswordStore) http.Handler {
 	return &bmcHandler{
 		passwordStore: store,
+	}
+}
+
+// NewDeleteHandler returns a new deleteHandler, which implmements the
+// http.Hanlder interface.
+func NewDeleteHandler(manager delete.Manager) http.Handler {
+	return &deleteHandler{
+		manager: manager,
 	}
 }

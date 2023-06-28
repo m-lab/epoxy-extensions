@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/m-lab/epoxy-extensions/bmc"
+	"github.com/m-lab/epoxy-extensions/delete"
 	"github.com/m-lab/epoxy-extensions/handler"
 	"github.com/m-lab/epoxy-extensions/metrics"
 	"github.com/m-lab/epoxy-extensions/token"
@@ -39,6 +40,8 @@ func main() {
 	tc := &token.TokenCommand{}
 	tokenManager := token.New(fBinDir, tc)
 	bmcPasswordStore := bmc.New()
+	dc := &delete.DeleteCommand{}
+	deleteManager := delete.New(fBinDir, dc)
 
 	http.HandleFunc("/", rootHandler)
 	http.Handle("/metrics", promhttp.Handler())
@@ -53,6 +56,10 @@ func main() {
 	http.HandleFunc("/v1/bmc_store_password",
 		promhttp.InstrumentHandlerDuration(metrics.BMCRequestDuration,
 			handler.NewBmcHandler(bmcPasswordStore)))
+
+	http.HandleFunc("/v1/delete_node",
+		promhttp.InstrumentHandlerDuration(metrics.DeleteRequestDuration,
+			handler.NewDeleteHandler(deleteManager)))
 
 	log.Printf("Listening on interface: %s", fListenAddress)
 	log.Fatal(http.ListenAndServe(fListenAddress, nil))

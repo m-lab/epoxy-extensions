@@ -38,4 +38,15 @@ var (
 		},
 		[]string{"method", "code"},
 	)
+
+	DeleteRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "delete_request_duration_seconds",
+			Help: "Request status codes and execution times.",
+			Buckets: []float64{
+				0.001, 0.01, 0.1, 1.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, math.Inf(+1),
+			},
+		},
+		[]string{"method", "code"},
+	)
 )
