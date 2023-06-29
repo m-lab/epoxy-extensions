@@ -27,6 +27,8 @@ type tokenHandler struct {
 func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var body []byte
 
+	log.Println(req.RequestURI)
+
 	// Require requests to be POSTs.
 	if req.Method != http.MethodPost {
 		resp.WriteHeader(http.StatusMethodNotAllowed)
@@ -83,6 +85,8 @@ type bmcHandler struct {
 func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var reqPassword string
 
+	log.Println(req.RequestURI)
+
 	// Require requests to be POSTs.
 	if req.Method != http.MethodPost {
 		resp.WriteHeader(http.StatusMethodNotAllowed)
@@ -105,6 +109,8 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		// Write no response.
 		return
 	}
+
+	log.Println("Request:", ext.Encode())
 
 	// Parse query parameters from the request.
 	queryParams, err := url.ParseQuery(ext.V1.RawQuery)
@@ -139,6 +145,8 @@ type deleteHandler struct {
 
 // ServeHTTP is the request handler for delete requests.
 func (d *deleteHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	log.Println(req.RequestURI)
+
 	// Require requests to be POSTs.
 	if req.Method != http.MethodPost {
 		resp.WriteHeader(http.StatusMethodNotAllowed)
@@ -161,6 +169,8 @@ func (d *deleteHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		// Write no response.
 		return
 	}
+
+	log.Println("Request:", ext.Encode())
 
 	err = d.manager.Delete(ext.V1.Hostname)
 	if err != nil {

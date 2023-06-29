@@ -6,6 +6,7 @@
 package delete
 
 import (
+	"log"
 	"os/exec"
 )
 
@@ -44,7 +45,8 @@ func (d *DeleteManager) Delete(target string) error {
 	args := append(commandArgs, target)
 
 	// Delete the node
-	_, err := d.Commander.Command(d.Command, args...)
+	output, err := d.Commander.Command(d.Command, args...)
+	log.Println(string(output))
 	if err != nil {
 		return err
 	}
