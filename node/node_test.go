@@ -1,4 +1,4 @@
-package delete
+package node
 
 import (
 	"fmt"
@@ -6,12 +6,12 @@ import (
 	"testing"
 )
 
-type fakeDeleteCommand struct {
+type fakeNodeCommand struct {
 	command string
 }
 
-func (d *fakeDeleteCommand) Command(prog string, args ...string) ([]byte, error) {
-	if d.command == "" {
+func (n *fakeNodeCommand) Command(prog string, args ...string) ([]byte, error) {
+	if n.command == "" {
 		return nil, fmt.Errorf("command failed")
 	}
 	return []byte("lol"), nil
@@ -38,12 +38,12 @@ func Test_Delete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dm := &DeleteManager{
-				Commander: &fakeDeleteCommand{
+			nm := &NodeManager{
+				Commander: &fakeNodeCommand{
 					command: tt.command,
 				},
 			}
-			err := dm.Delete(tt.hostname)
+			err := nm.Delete(tt.hostname)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Delete(): error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -51,7 +51,7 @@ func Test_Delete(t *testing.T) {
 	}
 }
 
-func Test_DeleteCommand(t *testing.T) {
+func Test_Command(t *testing.T) {
 	tests := []struct {
 		name    string
 		prog    string
@@ -75,22 +75,22 @@ func Test_DeleteCommand(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dc := &DeleteCommand{}
+			dc := &Command{}
 			output, err := dc.Command(tt.prog, tt.args...)
 			result := strings.TrimSpace(string(output))
 			if (err != nil) != tt.wantErr {
-				t.Errorf("DeleteCommand(): error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Command(): error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if result != tt.expect {
-				t.Errorf("DeleteCommand(): expected '%s', got '%s'", tt.expect, result)
+				t.Errorf("Command(): expected '%s', got '%s'", tt.expect, result)
 			}
 		})
 	}
 }
 
 func Test_New(t *testing.T) {
-	dc := &DeleteCommand{}
-	m := New("/fake/bin", dc)
+	c := &Command{}
+	m := New("/fake/bin", c)
 	var i interface{} = m
 	_, ok := i.(Manager)
 	if !ok {

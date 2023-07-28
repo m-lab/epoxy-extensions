@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/m-lab/epoxy-extensions/bmc"
-	"github.com/m-lab/epoxy-extensions/delete"
+	"github.com/m-lab/epoxy-extensions/node"
 	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
 )
@@ -137,14 +137,15 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusOK)
 }
 
-// deleteHandler implements the http.Handler interface and is the struct used to
-// interact with the delete package.
-type deleteHandler struct {
-	manager delete.Manager
+// nodeHandler implements the http.Handler interface and is the struct used to
+// interact with the node package.
+type nodeHandler struct {
+	manager node.Manager
+	action  string
 }
 
-// ServeHTTP is the request handler for delete requests.
-func (d *deleteHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+// ServeHTTP is the request handler for node requests.
+func (n *nodeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	log.Println(req.RequestURI)
 
 	// Require requests to be POSTs.
@@ -172,7 +173,13 @@ func (d *deleteHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	log.Println("Request:", ext.Encode())
 
-	err = d.manager.Delete(ext.V1.Hostname)
+	switch n.action {
+	case "delete":
+		err = n.manager.Delete(ext.V1.Hostname)
+	default:
+		log.Printf("Unknown node action '%s'", n.action)
+	}
+
 	if err != nil {
 		log.Println(err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -209,8 +216,9 @@ func NewBmcHandler(store bmc.PasswordStore) http.Handler {
 
 // NewDeleteHandler returns a new deleteHandler, which implmements the
 // http.Hanlder interface.
-func NewDeleteHandler(manager delete.Manager) http.Handler {
-	return &deleteHandler{
+func NewNodeHandler(manager node.Manager, action string) http.Handler {
+	return &nodeHandler{
 		manager: manager,
+		action:  action,
 	}
 }
