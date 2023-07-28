@@ -40,8 +40,7 @@ func main() {
 	tc := &token.TokenCommand{}
 	tokenManager := token.New(fBinDir, tc)
 	bmcPasswordStore := bmc.New()
-	nc := &node.Command{}
-	nodeManager := node.New(fBinDir, nc)
+	nodeManager := node.NewManager(fBinDir)
 
 	http.HandleFunc("/", rootHandler)
 	http.Handle("/metrics", promhttp.Handler())

@@ -6,12 +6,13 @@ import (
 	"testing"
 )
 
-type fakeNodeCommand struct {
+type fakeCommand struct {
+	Path    string
 	command string
 }
 
-func (n *fakeNodeCommand) Command(prog string, args ...string) ([]byte, error) {
-	if n.command == "" {
+func (fc *fakeCommand) Run(args ...string) ([]byte, error) {
+	if fc.command == "" {
 		return nil, fmt.Errorf("command failed")
 	}
 	return []byte("lol"), nil
@@ -38,12 +39,12 @@ func Test_Delete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nm := &NodeManager{
-				Commander: &fakeNodeCommand{
+			m := &Manager{
+				Command: &fakeCommand{
 					command: tt.command,
 				},
 			}
-			err := nm.Delete(tt.hostname)
+			err := m.Delete(tt.hostname)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Delete(): error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -75,8 +76,10 @@ func Test_Command(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dc := &Command{}
-			output, err := dc.Command(tt.prog, tt.args...)
+			dc := &Command{
+				Path: tt.prog,
+			}
+			output, err := dc.Run(tt.args...)
 			result := strings.TrimSpace(string(output))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Command(): error = %v, wantErr %v", err, tt.wantErr)
@@ -89,10 +92,9 @@ func Test_Command(t *testing.T) {
 }
 
 func Test_New(t *testing.T) {
-	c := &Command{}
-	m := New("/fake/bin", c)
+	m := NewManager("/fake/bin")
 	var i interface{} = m
-	_, ok := i.(Manager)
+	_, ok := i.(*Manager)
 	if !ok {
 		t.Errorf("New(): expected type Manager, but got %T", m)
 	}

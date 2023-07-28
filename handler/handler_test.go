@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	//"github.com/m-lab/epoxy-extensions/node"
+
 	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
 	"github.com/m-lab/go/host"
@@ -281,6 +283,86 @@ func Test_bmcHandler(t *testing.T) {
 
 			if tt.status != rec.Code {
 				t.Errorf("bmcPasswordStore: bad status code: got %d; want %d",
+					rec.Code, tt.status)
+			}
+		})
+	}
+}
+
+type fakeNodeManager struct {
+	command string
+}
+
+func (nm *fakeNodeManager) Delete(target string) error {
+	return nil
+}
+
+func Test_nodeHandler(t *testing.T) {
+	tests := []struct {
+		action string
+		method string
+		name   string
+		status int
+		v1     *extension.V1
+	}{
+		{
+			name:   "success",
+			method: "POST",
+			v1: &extension.V1{
+				Hostname: "mlab1-foo01.mlab-sandbox.measurement-lab.org",
+				LastBoot: time.Now().UTC().Add(-5 * time.Minute),
+			},
+			status: http.StatusOK,
+			action: "delete",
+		},
+		{
+			action: "bad-action",
+			name:   "failure-bad-action",
+			method: "POST",
+			v1: &extension.V1{
+				Hostname: "mlab1-foo01.mlab-oti.measurement-lab.org",
+				LastBoot: time.Now().UTC().Add(-5 * time.Minute),
+			},
+			status: http.StatusInternalServerError,
+		},
+		{
+			name:   "failure-bad-method",
+			method: "GET",
+			status: http.StatusMethodNotAllowed,
+		},
+		{
+			name:   "failure-bad-request-v1-nil",
+			method: "POST",
+			v1:     nil,
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "failure-last-boot-too-old",
+			method: "POST",
+			v1: &extension.V1{
+				Hostname:    "mlab1-foo01.mlab-oti.measurement-lab.org",
+				IPv4Address: "192.168.1.1",
+				LastBoot:    time.Now().UTC().Add(-125 * time.Minute),
+				RawQuery:    "p=somepass&z=lol",
+			},
+			status: http.StatusRequestTimeout,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nm := &fakeNodeManager{
+				command: "lol",
+			}
+			nh := NewNodeHandler(nm, tt.action)
+			ext := extension.Request{V1: tt.v1}
+			req := httptest.NewRequest(
+				tt.method, "/v1/node/delete", strings.NewReader(ext.Encode()))
+			rec := httptest.NewRecorder()
+
+			nh.ServeHTTP(rec, req)
+
+			if tt.status != rec.Code {
+				t.Errorf("Nodeandler: bad status code: got %d; want %d",
 					rec.Code, tt.status)
 			}
 		})

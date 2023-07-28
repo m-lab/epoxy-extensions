@@ -1,13 +1,13 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/m-lab/epoxy-extensions/bmc"
-	"github.com/m-lab/epoxy-extensions/node"
 	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
 )
@@ -137,15 +137,20 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusOK)
 }
 
+// NodeManager defines the interface for managing a node.
+type NodeManager interface {
+	Delete(target string) error // Delete a node
+}
+
 // nodeHandler implements the http.Handler interface and is the struct used to
 // interact with the node package.
 type nodeHandler struct {
-	manager node.Manager
+	manager NodeManager
 	action  string
 }
 
 // ServeHTTP is the request handler for node requests.
-func (n *nodeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (nh *nodeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	log.Println(req.RequestURI)
 
 	// Require requests to be POSTs.
@@ -173,11 +178,12 @@ func (n *nodeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	log.Println("Request:", ext.Encode())
 
-	switch n.action {
+	switch nh.action {
 	case "delete":
-		err = n.manager.Delete(ext.V1.Hostname)
+		err = nh.manager.Delete(ext.V1.Hostname)
 	default:
-		log.Printf("Unknown node action '%s'", n.action)
+		log.Printf("Unknown node action '%s'", nh.action)
+		err = fmt.Errorf("unknown node action '%s'", nh.action)
 	}
 
 	if err != nil {
@@ -216,7 +222,7 @@ func NewBmcHandler(store bmc.PasswordStore) http.Handler {
 
 // NewDeleteHandler returns a new deleteHandler, which implmements the
 // http.Hanlder interface.
-func NewNodeHandler(manager node.Manager, action string) http.Handler {
+func NewNodeHandler(manager NodeManager, action string) http.Handler {
 	return &nodeHandler{
 		manager: manager,
 		action:  action,

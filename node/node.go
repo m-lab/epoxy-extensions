@@ -9,40 +9,38 @@ package node
 import (
 	"log"
 	"os/exec"
+
+	"github.com/m-lab/epoxy-extensions/handler"
 )
 
 // Commander is an interface that is used to wrap os/exec.Command() for testing purposes.
 type Commander interface {
-	Command(prog string, args ...string) ([]byte, error)
+	Run(args ...string) ([]byte, error)
 }
 
 // Command implements the Commander interface.
-type Command struct{}
+type Command struct {
+	Path string
+}
 
-func (c *Command) Command(prog string, args ...string) ([]byte, error) {
-	cmd := exec.Command(prog, args...)
+func (c *Command) Run(args ...string) ([]byte, error) {
+	cmd := exec.Command(c.Path, args...)
 	return cmd.Output()
 }
 
-// Manager defines the interface for managing a node.
-type Manager interface {
-	Delete(target string) error // Delete a node
-}
-
-// NodeManager implements the Manager interface.
-type NodeManager struct {
-	Command   string
-	Commander Commander
+// Manager mediates operations for a given node.
+type Manager struct {
+	Command Commander
 }
 
 // Delete deletes a node from the cluster.
-func (n *NodeManager) Delete(target string) error {
+func (m *Manager) Delete(target string) error {
 	args := []string{
 		"delete", "node", target,
 	}
 
 	// Delete the node
-	output, err := n.Commander.Command(n.Command, args...)
+	output, err := m.Command.Run(args...)
 	log.Println(string(output))
 	if err != nil {
 		return err
@@ -51,10 +49,11 @@ func (n *NodeManager) Delete(target string) error {
 	return nil
 }
 
-// New returns a NodeManager.
-func New(bindir string, commander Commander) Manager {
-	return &NodeManager{
-		Command:   bindir + "/kubectl",
-		Commander: commander,
+// NewManager returns a handler.NodeManager
+func NewManager(bindir string) handler.NodeManager {
+	return &Manager{
+		Command: &Command{
+			Path: bindir + "/kubectl",
+		},
 	}
 }
