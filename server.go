@@ -42,7 +42,10 @@ func main() {
 	tc := &token.TokenCommand{}
 	tokenManager := token.New(fBinDir, tc)
 	bmcPasswordStore := bmc.New()
-	nodeManager := node.NewManager(fBinDir)
+	nodeCommand := &node.Command{
+		Path: fBinDir + "/kubectl",
+	}
+	nodeManager := node.NewManager(nodeCommand)
 
 	http.HandleFunc("/", rootHandler)
 	http.Handle("/metrics", promhttp.Handler())

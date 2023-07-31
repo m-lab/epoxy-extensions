@@ -47,11 +47,9 @@ func (m *Manager) Delete(target string) error {
 	return nil
 }
 
-// NewManager returns a handler.NodeManager
-func NewManager(bindir string) *Manager {
+// NewManager returns a *node.Manager
+func NewManager(cmd *Command) *Manager {
 	return &Manager{
-		Command: &Command{
-			Path: bindir + "/kubectl",
-		},
+		Command: cmd,
 	}
 }

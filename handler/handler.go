@@ -28,7 +28,7 @@ type tokenHandler struct {
 func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var body []byte
 
-	log.Println(req.RequestURI)
+	log.Printf("context %p: %s", req.Context(), req.RequestURI)
 
 	// Require requests to be POSTs.
 	if req.Method != http.MethodPost {
@@ -38,7 +38,7 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	ext, err := decodeMessage(req)
 	if err != nil || ext.V1 == nil {
-		log.Println(err)
+		log.Printf("context %p: %v", req.Context(), err)
 		resp.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -50,11 +50,11 @@ func (t *tokenHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Println("Request:", ext.Encode())
+	log.Printf("context %p: %s", req.Context(), ext.Encode())
 
 	err = t.manager.Create(ext.V1.Hostname)
 	if err != nil {
-		log.Println(err)
+		log.Printf("context %p: %v", req.Context(), err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -86,7 +86,7 @@ type bmcHandler struct {
 func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	var reqPassword string
 
-	log.Println(req.RequestURI)
+	log.Printf("context %p: %s", req.Context(), req.RequestURI)
 
 	// Require requests to be POSTs.
 	if req.Method != http.MethodPost {
@@ -97,7 +97,7 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	ext, err := decodeMessage(req)
 	if err != nil || ext.V1 == nil {
-		log.Println(err)
+		log.Printf("context %p: %v", req.Context(), err)
 		resp.WriteHeader(http.StatusBadRequest)
 		// Write no response.
 		return
@@ -111,26 +111,26 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Println("Request:", ext.Encode())
+	log.Printf("context %p: %s", req.Context(), ext.Encode())
 
 	// Parse query parameters from the request.
 	queryParams, err := url.ParseQuery(ext.V1.RawQuery)
 	if err != nil {
-		log.Printf("Failed to parse RawQuery field: %v", err)
+		log.Printf("context %p: failed to parse RawQuery field: %v", req.Context(), err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	reqPassword = queryParams.Get("p")
 	if reqPassword == "" {
-		log.Println("Query parameter 'p' missing in request, or is empty.")
+		log.Printf("context %p: query parameter 'p' missing in request or empty", req.Context())
 		resp.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	err = b.passwordStore.Put(ext.V1.Hostname, reqPassword)
 	if err != nil {
-		log.Println(err)
+		log.Printf("context %p: %v", req.Context(), err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -158,7 +158,7 @@ func (nh *nodeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	ext, err := decodeMessage(req)
 	if err != nil || ext.V1 == nil {
-		log.Println(err)
+		log.Printf("context %p: %v", req.Context(), err)
 		resp.WriteHeader(http.StatusBadRequest)
 		// Write no response.
 		return

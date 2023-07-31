@@ -27,11 +27,10 @@ func Test_Delete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &Manager{
-				Command: &Command{
-					Path: tt.command,
-				},
+			c := &Command{
+				Path: tt.command,
 			}
+			m := NewManager(c)
 			err := m.Delete(tt.hostname)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Delete(): error = %v, wantErr %v", err, tt.wantErr)
