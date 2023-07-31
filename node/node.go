@@ -9,8 +9,6 @@ package node
 import (
 	"log"
 	"os/exec"
-
-	"github.com/m-lab/epoxy-extensions/handler"
 )
 
 // Commander is an interface that is used to wrap os/exec.Command() for testing purposes.
@@ -50,7 +48,7 @@ func (m *Manager) Delete(target string) error {
 }
 
 // NewManager returns a handler.NodeManager
-func NewManager(bindir string) handler.NodeManager {
+func NewManager(bindir string) *Manager {
 	return &Manager{
 		Command: &Command{
 			Path: bindir + "/kubectl",

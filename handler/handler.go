@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/m-lab/epoxy-extensions/bmc"
+	"github.com/m-lab/epoxy-extensions/node"
 	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
 )
@@ -137,15 +138,10 @@ func (b *bmcHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusOK)
 }
 
-// NodeManager defines the interface for managing a node.
-type NodeManager interface {
-	Delete(target string) error // Delete a node
-}
-
 // nodeHandler implements the http.Handler interface and is the struct used to
 // interact with the node package.
 type nodeHandler struct {
-	manager NodeManager
+	manager *node.Manager
 	action  string
 }
 
@@ -222,7 +218,7 @@ func NewBmcHandler(store bmc.PasswordStore) http.Handler {
 
 // NewDeleteHandler returns a new deleteHandler, which implmements the
 // http.Hanlder interface.
-func NewNodeHandler(manager NodeManager, action string) http.Handler {
+func NewNodeHandler(manager *node.Manager, action string) http.Handler {
 	return &nodeHandler{
 		manager: manager,
 		action:  action,

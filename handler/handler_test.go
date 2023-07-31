@@ -11,6 +11,7 @@ import (
 
 	//"github.com/m-lab/epoxy-extensions/node"
 
+	"github.com/m-lab/epoxy-extensions/node"
 	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
 	"github.com/m-lab/go/host"
@@ -45,16 +46,6 @@ func (ft *fakeTokenManager) Response(version string) ([]byte, error) {
 		return []byte(ft.token), nil
 	}
 	return json.Marshal(ft.response)
-}
-
-type fakePasswordStore struct{}
-
-func (p *fakePasswordStore) Put(hostname string, password string) error {
-	_, err := host.Parse(hostname)
-	if err != nil {
-		return fmt.Errorf("bad hostname")
-	}
-	return nil
 }
 
 func Test_tokenHandler(t *testing.T) {
@@ -187,6 +178,16 @@ func Test_tokenHandler(t *testing.T) {
 	}
 }
 
+type fakePasswordStore struct{}
+
+func (p *fakePasswordStore) Put(hostname string, password string) error {
+	_, err := host.Parse(hostname)
+	if err != nil {
+		return fmt.Errorf("bad hostname")
+	}
+	return nil
+}
+
 func Test_bmcHandler(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -289,31 +290,47 @@ func Test_bmcHandler(t *testing.T) {
 	}
 }
 
-type fakeNodeManager struct {
+// fakeCommand implements the Commander interface
+type fakeCommand struct {
+	Path    string
 	command string
 }
 
-func (nm *fakeNodeManager) Delete(target string) error {
-	return nil
+func (fc *fakeCommand) Run(args ...string) ([]byte, error) {
+	if fc.command == "" {
+		return nil, fmt.Errorf("command failed")
+	}
+	return []byte("lol"), nil
 }
-
 func Test_nodeHandler(t *testing.T) {
 	tests := []struct {
-		action string
-		method string
-		name   string
-		status int
-		v1     *extension.V1
+		action  string
+		command string
+		method  string
+		name    string
+		status  int
+		v1      *extension.V1
 	}{
 		{
-			name:   "success",
-			method: "POST",
+			action:  "delete",
+			command: "fakecommand",
+			name:    "success",
+			method:  "POST",
 			v1: &extension.V1{
 				Hostname: "mlab1-foo01.mlab-sandbox.measurement-lab.org",
 				LastBoot: time.Now().UTC().Add(-5 * time.Minute),
 			},
 			status: http.StatusOK,
+		},
+		{
 			action: "delete",
+			name:   "failure-command-failed",
+			method: "POST",
+			v1: &extension.V1{
+				Hostname: "mlab1-foo01.mlab-sandbox.measurement-lab.org",
+				LastBoot: time.Now().UTC().Add(-5 * time.Minute),
+			},
+			status: http.StatusInternalServerError,
 		},
 		{
 			action: "bad-action",
@@ -340,18 +357,19 @@ func Test_nodeHandler(t *testing.T) {
 			name:   "failure-last-boot-too-old",
 			method: "POST",
 			v1: &extension.V1{
-				Hostname:    "mlab1-foo01.mlab-oti.measurement-lab.org",
-				IPv4Address: "192.168.1.1",
-				LastBoot:    time.Now().UTC().Add(-125 * time.Minute),
-				RawQuery:    "p=somepass&z=lol",
+				Hostname: "mlab1-foo01.mlab-oti.measurement-lab.org",
+				LastBoot: time.Now().UTC().Add(-125 * time.Minute),
 			},
 			status: http.StatusRequestTimeout,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nm := &fakeNodeManager{
-				command: "lol",
+			nm := &node.Manager{
+				Command: &fakeCommand{
+					Path:    "/usr/bin/true",
+					command: tt.command,
+				},
 			}
 			nh := NewNodeHandler(nm, tt.action)
 			ext := extension.Request{V1: tt.v1}
