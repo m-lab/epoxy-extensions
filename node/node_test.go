@@ -1,22 +1,9 @@
 package node
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
-
-type fakeCommand struct {
-	Path    string
-	command string
-}
-
-func (fc *fakeCommand) Run(args ...string) ([]byte, error) {
-	if fc.command == "" {
-		return nil, fmt.Errorf("command failed")
-	}
-	return []byte("lol"), nil
-}
 
 func Test_Delete(t *testing.T) {
 	tests := []struct {
@@ -27,12 +14,13 @@ func Test_Delete(t *testing.T) {
 	}{
 		{
 			name:     "success",
+			command:  "/usr/bin/true",
 			hostname: "mlab4-abc0t.mlab-sandbox.measurement-lab.org",
-			command:  "kubectl delete node",
 			wantErr:  false,
 		},
 		{
 			name:     "fail-command-error",
+			command:  "/bin/doesnt/exist",
 			hostname: "mlab4-abc0t.mlab-sandbox.measurement-lab.org",
 			wantErr:  true,
 		},
@@ -40,8 +28,8 @@ func Test_Delete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &Manager{
-				Command: &fakeCommand{
-					command: tt.command,
+				Command: &Command{
+					Path: tt.command,
 				},
 			}
 			err := m.Delete(tt.hostname)
@@ -88,14 +76,5 @@ func Test_Command(t *testing.T) {
 				t.Errorf("Command(): expected '%s', got '%s'", tt.expect, result)
 			}
 		})
-	}
-}
-
-func Test_New(t *testing.T) {
-	m := NewManager("/fake/bin")
-	var i interface{} = m
-	_, ok := i.(*Manager)
-	if !ok {
-		t.Errorf("New(): expected type Manager, but got %T", m)
 	}
 }
