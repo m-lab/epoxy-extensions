@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	//"github.com/m-lab/epoxy-extensions/node"
-
 	"github.com/m-lab/epoxy-extensions/node"
 	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
