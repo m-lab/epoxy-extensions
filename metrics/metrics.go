@@ -38,4 +38,15 @@ var (
 		},
 		[]string{"method", "code"},
 	)
+
+	NodeRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "node_request_duration_seconds",
+			Help: "Request status codes and execution times.",
+			Buckets: []float64{
+				0.001, 0.01, 0.1, 1.0, 5.0, 10.0, 30.0, math.Inf(+1),
+			},
+		},
+		[]string{"method", "code"},
+	)
 )

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/m-lab/epoxy-extensions/node"
 	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/m-lab/epoxy/extension"
 	"github.com/m-lab/go/host"
@@ -43,16 +44,6 @@ func (ft *fakeTokenManager) Response(version string) ([]byte, error) {
 		return []byte(ft.token), nil
 	}
 	return json.Marshal(ft.response)
-}
-
-type fakePasswordStore struct{}
-
-func (p *fakePasswordStore) Put(hostname string, password string) error {
-	_, err := host.Parse(hostname)
-	if err != nil {
-		return fmt.Errorf("bad hostname")
-	}
-	return nil
 }
 
 func Test_tokenHandler(t *testing.T) {
@@ -185,6 +176,16 @@ func Test_tokenHandler(t *testing.T) {
 	}
 }
 
+type fakePasswordStore struct{}
+
+func (p *fakePasswordStore) Put(hostname string, password string) error {
+	_, err := host.Parse(hostname)
+	if err != nil {
+		return fmt.Errorf("bad hostname")
+	}
+	return nil
+}
+
 func Test_bmcHandler(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -281,6 +282,91 @@ func Test_bmcHandler(t *testing.T) {
 
 			if tt.status != rec.Code {
 				t.Errorf("bmcPasswordStore: bad status code: got %d; want %d",
+					rec.Code, tt.status)
+			}
+		})
+	}
+}
+
+func Test_nodeHandler(t *testing.T) {
+	tests := []struct {
+		action  string
+		command string
+		method  string
+		name    string
+		status  int
+		v1      *extension.V1
+	}{
+		{
+			name:    "success",
+			action:  "delete",
+			command: "/bin/true",
+			method:  "POST",
+			v1: &extension.V1{
+				Hostname: "mlab1-foo01.mlab-sandbox.measurement-lab.org",
+				LastBoot: time.Now().UTC().Add(-5 * time.Minute),
+			},
+			status: http.StatusOK,
+		},
+		{
+			name:    "failure-command-failed",
+			action:  "delete",
+			command: "/bin/doesnt/exist",
+			method:  "POST",
+			v1: &extension.V1{
+				Hostname: "mlab1-foo01.mlab-sandbox.measurement-lab.org",
+				LastBoot: time.Now().UTC().Add(-5 * time.Minute),
+			},
+			status: http.StatusInternalServerError,
+		},
+		{
+			action: "bad-action",
+			name:   "failure-bad-action",
+			method: "POST",
+			v1: &extension.V1{
+				Hostname: "mlab1-foo01.mlab-oti.measurement-lab.org",
+				LastBoot: time.Now().UTC().Add(-5 * time.Minute),
+			},
+			status: http.StatusInternalServerError,
+		},
+		{
+			name:   "failure-bad-method",
+			method: "GET",
+			status: http.StatusMethodNotAllowed,
+		},
+		{
+			name:   "failure-bad-request-v1-nil",
+			method: "POST",
+			v1:     nil,
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "failure-last-boot-too-old",
+			method: "POST",
+			v1: &extension.V1{
+				Hostname: "mlab1-foo01.mlab-oti.measurement-lab.org",
+				LastBoot: time.Now().UTC().Add(-125 * time.Minute),
+			},
+			status: http.StatusRequestTimeout,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nm := &node.Manager{
+				Command: &node.Command{
+					Path: tt.command,
+				},
+			}
+			nh := NewNodeHandler(nm, tt.action)
+			ext := extension.Request{V1: tt.v1}
+			req := httptest.NewRequest(
+				tt.method, "/v1/node/delete", strings.NewReader(ext.Encode()))
+			rec := httptest.NewRecorder()
+
+			nh.ServeHTTP(rec, req)
+
+			if tt.status != rec.Code {
+				t.Errorf("Nodeandler: bad status code: got %d; want %d",
 					rec.Code, tt.status)
 			}
 		})

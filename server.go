@@ -9,6 +9,7 @@ import (
 	"github.com/m-lab/epoxy-extensions/bmc"
 	"github.com/m-lab/epoxy-extensions/handler"
 	"github.com/m-lab/epoxy-extensions/metrics"
+	"github.com/m-lab/epoxy-extensions/node"
 	"github.com/m-lab/epoxy-extensions/token"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -36,9 +37,15 @@ func init() {
 func main() {
 	flag.Parse()
 
+	log.SetFlags(log.LUTC | log.LstdFlags | log.Lshortfile)
+
 	tc := &token.TokenCommand{}
 	tokenManager := token.New(fBinDir, tc)
 	bmcPasswordStore := bmc.New()
+	nodeCommand := &node.Command{
+		Path: fBinDir + "/kubectl",
+	}
+	nodeManager := node.NewManager(nodeCommand)
 
 	http.HandleFunc("/", rootHandler)
 	http.Handle("/metrics", promhttp.Handler())
@@ -53,6 +60,10 @@ func main() {
 	http.HandleFunc("/v1/bmc_store_password",
 		promhttp.InstrumentHandlerDuration(metrics.BMCRequestDuration,
 			handler.NewBmcHandler(bmcPasswordStore)))
+
+	http.HandleFunc("/v1/node/delete",
+		promhttp.InstrumentHandlerDuration(metrics.NodeRequestDuration,
+			handler.NewNodeHandler(nodeManager, "delete")))
 
 	log.Printf("Listening on interface: %s", fListenAddress)
 	log.Fatal(http.ListenAndServe(fListenAddress, nil))

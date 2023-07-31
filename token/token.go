@@ -54,10 +54,10 @@ func (t *TokenManager) Create(target string) error {
 	// Append the --description flag to the slice of arguments, since it is only
 	// after the request has been handled that we know which host the request is for.
 	desc := fmt.Sprintf("Allow %s to join the cluster", target)
-	commandArgs = append(commandArgs, "--description", desc)
+	args := append(commandArgs, "--description", desc)
 
 	// Allocate the token for the given hostname.
-	output, err := t.Commander.Command(t.Command, commandArgs...)
+	output, err := t.Commander.Command(t.Command, args...)
 	if err != nil {
 		return err
 	}
