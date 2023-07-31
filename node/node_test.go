@@ -14,7 +14,7 @@ func Test_Delete(t *testing.T) {
 	}{
 		{
 			name:     "success",
-			command:  "/usr/bin/true",
+			command:  "/bin/true",
 			hostname: "mlab4-abc0t.mlab-sandbox.measurement-lab.org",
 			wantErr:  false,
 		},

@@ -300,7 +300,7 @@ func Test_nodeHandler(t *testing.T) {
 		{
 			name:    "success",
 			action:  "delete",
-			command: "/usr/bin/true",
+			command: "/bin/true",
 			method:  "POST",
 			v1: &extension.V1{
 				Hostname: "mlab1-foo01.mlab-sandbox.measurement-lab.org",
