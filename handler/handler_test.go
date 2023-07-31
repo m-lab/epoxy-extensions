@@ -288,18 +288,6 @@ func Test_bmcHandler(t *testing.T) {
 	}
 }
 
-// fakeCommand implements the Commander interface
-type fakeCommand struct {
-	Path    string
-	command string
-}
-
-func (fc *fakeCommand) Run(args ...string) ([]byte, error) {
-	if fc.command == "" {
-		return nil, fmt.Errorf("command failed")
-	}
-	return []byte("lol"), nil
-}
 func Test_nodeHandler(t *testing.T) {
 	tests := []struct {
 		action  string
@@ -310,9 +298,9 @@ func Test_nodeHandler(t *testing.T) {
 		v1      *extension.V1
 	}{
 		{
-			action:  "delete",
-			command: "fakecommand",
 			name:    "success",
+			action:  "delete",
+			command: "/usr/bin/true",
 			method:  "POST",
 			v1: &extension.V1{
 				Hostname: "mlab1-foo01.mlab-sandbox.measurement-lab.org",
@@ -321,9 +309,10 @@ func Test_nodeHandler(t *testing.T) {
 			status: http.StatusOK,
 		},
 		{
-			action: "delete",
-			name:   "failure-command-failed",
-			method: "POST",
+			name:    "failure-command-failed",
+			action:  "delete",
+			command: "/bin/doesnt/exist",
+			method:  "POST",
 			v1: &extension.V1{
 				Hostname: "mlab1-foo01.mlab-sandbox.measurement-lab.org",
 				LastBoot: time.Now().UTC().Add(-5 * time.Minute),
@@ -364,9 +353,8 @@ func Test_nodeHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			nm := &node.Manager{
-				Command: &fakeCommand{
-					Path:    "/usr/bin/true",
-					command: tt.command,
+				Command: &node.Command{
+					Path: tt.command,
 				},
 			}
 			nh := NewNodeHandler(nm, tt.action)

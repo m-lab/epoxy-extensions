@@ -37,6 +37,8 @@ func init() {
 func main() {
 	flag.Parse()
 
+	log.SetFlags(log.LUTC | log.LstdFlags | log.Lshortfile)
+
 	tc := &token.TokenCommand{}
 	tokenManager := token.New(fBinDir, tc)
 	bmcPasswordStore := bmc.New()

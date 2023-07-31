@@ -147,7 +147,7 @@ type nodeHandler struct {
 
 // ServeHTTP is the request handler for node requests.
 func (nh *nodeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	log.Println(req.RequestURI)
+	log.Printf("context %p: %s", req.Context(), req.RequestURI)
 
 	// Require requests to be POSTs.
 	if req.Method != http.MethodPost {
@@ -172,18 +172,18 @@ func (nh *nodeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Println("Request:", ext.Encode())
+	log.Printf("context %p: %s", req.Context(), ext.Encode())
 
 	switch nh.action {
 	case "delete":
 		err = nh.manager.Delete(ext.V1.Hostname)
 	default:
-		log.Printf("Unknown node action '%s'", nh.action)
+		log.Printf("context %p: unknown action '%s'", req.Context(), nh.action)
 		err = fmt.Errorf("unknown node action '%s'", nh.action)
 	}
 
 	if err != nil {
-		log.Println(err)
+		log.Printf("context %p: %v", req.Context(), err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
