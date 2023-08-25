@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/m-lab/epoxy v1.2.5
-	github.com/m-lab/go v0.1.59
+	github.com/m-lab/go v0.1.66
 	github.com/m-lab/reboot-service v0.6.1
 	github.com/prometheus/client_golang v1.14.0
 )
